@@ -8,6 +8,8 @@ import re
 import time
 from typing import Dict, List, Optional, Tuple
 
+from pydantic import ValidationError
+
 from .signal_model import Direction, OrderType, TradingSignal
 from utils.logger import get_logger
 
@@ -181,6 +183,11 @@ class RegexParser:
                 parsed_at_ns=time.time_ns(),
             )
             return signal, confidence
+        except ValidationError as e:
+            why = "; ".join(err.get("msg", "").replace("Value error, ", "") for err in e.errors())
+            log.warning(f"[{msg_id}] ⛔ Signal incohérent ({why}) — faute de frappe probable, "
+                        f"on attend que le trader corrige le message")
+            return None, 0.0
         except Exception as e:
             log.error(f"[{msg_id}] Erreur création signal: {e}")
             return None, 0.0
