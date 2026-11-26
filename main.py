@@ -121,6 +121,7 @@ class TradingBot:
         self._monitor_task = asyncio.create_task(self._monitor_loop())
 
         log.info("=== BOT PRÊT — En attente de signaux... ===")
+        self._notify("✅ Bot démarré — en écoute du canal")
 
     async def _monitor_loop(self) -> None:
         """Boucle d'arrière-plan autonome vérifiant le statut des TP toutes les secondes."""
@@ -303,8 +304,12 @@ class TradingBot:
         try:
             n = await self._executor.apply_update(signal_msg_id, cmds)
             log.info(f"🔧 {n} modification(s) appliquée(s) sur MT5 pour #{signal_msg_id}")
+            if n:
+                self._notify(f"🔧 Canal : « {text.strip()[:80]} » → {', '.join(map(str, cmds))} "
+                             f"({n} modification(s) sur MT5, signal #{signal_msg_id})")
         except Exception as e:
             log.error(f"Erreur mise à jour #{signal_msg_id}: {e}")
+            self._notify(f"❌ Erreur en appliquant « {text.strip()[:60]} » sur #{signal_msg_id} : {e}")
         return True
 
     async def _handle_edit(
