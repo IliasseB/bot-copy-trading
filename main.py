@@ -26,6 +26,7 @@ from parser.regex_parser import looks_like_signal
 from parser.update_parser import parse_update, parse_update_no_reply
 from risk_management.risk_manager import RiskManager
 from telegram_listener.listener import TelegramListener
+from utils.state_store import StateStore
 from utils.instance_lock import AlreadyRunningError, InstanceLock
 from utils.logger import get_logger, setup_logging
 
@@ -54,6 +55,12 @@ class TradingBot:
         # pré-alerte "XAUUSD BUY NOW" dont le signal complet est lui-même une réponse...)
         self._reply_root: Dict[int, int] = {}
         self._last_signal_msg_id: Optional[int] = None   # dernier signal vu sur le canal
+        # Mémoire sur disque : après un redémarrage, les réponses et ordres sans "répondre"
+        # retrouvent toujours leur signal
+        self._state = StateStore()
+        saved = self._state.load()
+        self._reply_root = {int(k): int(v) for k, v in saved.get("reply_root", {}).items()}
+        self._last_signal_msg_id = saved.get("last_signal_msg_id")
         # Tâche d'arrière-plan pour surveiller le Break-Even
         self._monitor_task: Optional[asyncio.Task] = None
 
@@ -170,6 +177,7 @@ class TradingBot:
             self._reply_root[msg_id] = root
             if len(self._reply_root) > 5000:
                 self._reply_root = dict(list(self._reply_root.items())[-2500:])
+            self._persist()
 
         is_signal = looks_like_signal(text)
 
@@ -199,8 +207,10 @@ class TradingBot:
 
         if signal is None:
             log.info(f"[{msg_id}] Pas un signal — ignoré")
+            self._persist()
             return
         self._last_signal_msg_id = msg_id
+        self._persist()
 
         parse_ms = (time.time_ns() - t0) / 1_000_000
         log.info(
@@ -210,6 +220,16 @@ class TradingBot:
             f"conf={confidence:.2f} parse_ms={parse_ms:.1f}ms"
         )
         await self._execute_and_log(signal, t0)
+
+    def _persist(self) -> None:
+        state = getattr(self, "_state", None)
+        if state is None:
+            return
+        try:
+            recent = dict(list(self._reply_root.items())[-2000:])
+            state.save({"reply_root": recent, "last_signal_msg_id": self._last_signal_msg_id})
+        except OSError as e:
+            log.warning(f"Mémoire du bot non sauvegardée: {e}")
 
     async def _execute_and_log(self, signal, t0: int, label: str = "TRADES ENVOYÉS") -> None:
         result = await self._executor.execute(signal)
