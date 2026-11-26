@@ -4,8 +4,9 @@ echo   TELEGRAM TRADING BOT - INSTALLATION WINDOWS
 echo ============================================================
 echo.
 
-:: 1. Verifier Python
-python --version >nul 2>&1
+:: 1. Verifier Python (3.12 conseille : version testee avec MetaTrader5, les plus recentes n'ont pas toujours de paquet)
+py -3.12 --version >nul 2>&1 && (set "PYEXE=py -3.12") || (set "PYEXE=python")
+%PYEXE% --version >nul 2>&1
 IF %ERRORLEVEL% NEQ 0 (
     echo [ERREUR] Python n'est pas installe !
     echo Telecharge Python 3.12 sur https://python.org/downloads
@@ -18,7 +19,7 @@ echo [OK] Python detecte
 :: 2. Creer environnement virtuel
 echo.
 echo [1/5] Creation de l'environnement virtuel...
-python -m venv venv
+%PYEXE% -m venv venv
 echo [OK] venv cree
 
 :: 3. Activer venv
