@@ -37,6 +37,12 @@ class SecretMaskingFilter(logging.Filter):
 def setup_logging(level: str = "INFO", log_file: str = "bot.log",
                   secrets: Optional[Iterable[str]] = None) -> None:
     log_level = getattr(logging, level.upper(), logging.INFO)
+    # Console Windows (cp1252) : les accents et emojis s'affichaient en "m�me" → UTF-8 forcé
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
 
     handlers = [
         logging.StreamHandler(sys.stdout),
