@@ -491,8 +491,21 @@ class MT5Bridge:
                     "comment": o.comment, "magic": o.magic, "symbol": o.symbol,
                     "price_open": o.price_open, "sl": o.sl, "tp": o.tp,
                     "type": "BUY" if o.type in buy_types else "SELL",
+                    "time_setup": o.time_setup,      # heure serveur de création de l'ordre
                 }
             return {"positions": positions, "orders": orders}
+
+        return await self._run(_get)
+
+    async def get_server_time(self, symbol: str = "XAUUSD") -> Optional[int]:
+        """Heure actuelle du SERVEUR MT5 (même référence que time_setup des ordres)."""
+        await self.ensure_connected()
+        if not MT5_AVAILABLE:
+            return int(time.time())
+
+        def _get():
+            tick = mt5.symbol_info_tick(self._resolve_symbol(symbol))
+            return int(tick.time) if tick else None
 
         return await self._run(_get)
 
