@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
-from config import MT5Config
+from config import MT5Config, reveal
 from utils.logger import get_logger
 
 log = get_logger("mt5")
@@ -73,7 +73,7 @@ class MT5Bridge:
     def _connect_sync(self) -> bool:
         kwargs = dict(
             login=self._cfg.login,
-            password=self._cfg.password,
+            password=reveal(self._cfg.password),
             server=self._cfg.server,
             timeout=self._cfg.timeout,
         )

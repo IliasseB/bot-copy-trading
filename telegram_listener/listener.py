@@ -12,7 +12,7 @@ from typing import Callable, Coroutine, List, Optional, Set
 from telethon import TelegramClient, events
 from telethon.tl.types import Message, PeerChannel
 
-from config import TelegramConfig
+from config import TelegramConfig, reveal
 from parser.image_classifier import image_to_text
 from utils.logger import get_logger
 
@@ -34,7 +34,7 @@ class TelegramListener:
         self._client = TelegramClient(
             config.session_name,
             api_id=config.api_id,
-            api_hash=config.api_hash,
+            api_hash=reveal(config.api_hash),
             connection_retries=-1,
             retry_delay=1,
             auto_reconnect=True,

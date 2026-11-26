@@ -8,7 +8,7 @@ import json
 from functools import lru_cache
 from typing import Dict, List
 
-from pydantic import Field, field_validator
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,7 +16,7 @@ class TelegramConfig(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="TELEGRAM_", env_file=".env", extra="ignore")
 
     api_id: int = Field(..., description="Telegram API ID from my.telegram.org")
-    api_hash: str = Field(..., description="Telegram API Hash from my.telegram.org")
+    api_hash: SecretStr = Field(..., description="Telegram API Hash from my.telegram.org (jamais affiché)")
     phone: str = Field(..., description="Phone number with country code")
     session_name: str = Field(default="trading_bot")
     group_ids: str = Field(..., description="Comma-separated group IDs")
@@ -37,7 +37,7 @@ class MT5Config(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="MT5_", env_file=".env", extra="ignore")
 
     login: int = Field(..., description="MT5 account login")
-    password: str = Field(..., description="MT5 account password")
+    password: SecretStr = Field(..., description="MT5 account password (jamais affiché)")
     server: str = Field(..., description="MT5 broker server")
     path: str = Field(default="", description="Path to terminal64.exe")
     timeout: int = Field(default=60000, description="MT5 connection timeout ms")
@@ -140,6 +140,11 @@ class AppConfig:
     @property
     def is_development(self) -> bool:
         return self.bot.env == "development"
+
+
+def reveal(value) -> str:
+    """Valeur en clair d'un SecretStr (ou d'une chaîne simple), à n'utiliser qu'au moment de se connecter."""
+    return value.get_secret_value() if hasattr(value, "get_secret_value") else value
 
 
 @lru_cache(maxsize=1)
