@@ -251,3 +251,14 @@ async def test_sl_ne_recule_pas_une_jambe_deja_au_be():
     await bot._on_telegram_message("mettez vous BE", 901, 1, False, reply_to=900)
     await bot._on_telegram_message("❌ MODIFIER SL A 4060", 902, 1, False, reply_to=900)
     assert all(p["sl"] == 4068.0 for p in mt5.positions.values())
+
+
+@pytest.mark.parametrize("entry, sl, tp", [
+    ("4423", "4521", "4526"),        # #7273 : entrée tapée 4423 au lieu de 4523
+    ("4402-4495", "4493", "4408"),   # #7317 : zone inversée/fausse
+    ("3439-4332", "4327", "4349"),   # #9543 : 3439 au lieu de 4329
+])
+def test_signaux_reels_avec_faute_de_frappe_refuses(entry, sl, tp):
+    text = SIG.replace("4066-4069", entry).replace("SL : 4062", f"SL : {sl}").replace("TP1: 4072", f"TP1: {tp}")
+    sig, _ = RegexParser().parse(text, 1, 1)
+    assert sig is None
