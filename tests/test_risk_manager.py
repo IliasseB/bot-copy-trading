@@ -43,6 +43,9 @@ def make_signal(**kwargs):
         entry=3350.0, stop_loss=3340.0, take_profits=[3365.0], confidence=0.9,
     )
     defaults.update(kwargs)
+    # TP cohérent avec l'entrée demandée (un BUY à 4124 ne peut pas viser 3365)
+    if "take_profits" not in kwargs and defaults["entry"]:
+        defaults["take_profits"] = [defaults["entry"] + 15.0]
     return TradingSignal(**defaults)
 
 
