@@ -673,6 +673,38 @@ class TradeExecutor:
                     log.info(f"{'✅' if ok else '❌'} [UPDATE #{msg_id}] TP ticket #{t} → {tp}")
         return done
 
+    async def expire_pending_orders(self, max_age_minutes: float) -> int:
+        """
+        Annule les ordres en attente du bot plus vieux que `max_age_minutes`.
+        Un ordre au bord de la zone qui n'est toujours pas déclenché longtemps après
+        le signal correspond à un setup que le canal a abandonné.
+        """
+        if not max_age_minutes or max_age_minutes <= 0:
+            return 0
+        try:
+            state = await self._mt5.get_active_state()
+        except Exception:
+            return 0
+        bot_orders = {t: d for t, d in state["orders"].items()
+                      if re.match(r"^TG#\d+_", d.get("comment") or "")
+                      and d.get("magic", MT5Bridge.BOT_MAGIC) == MT5Bridge.BOT_MAGIC}
+        if not bot_orders:
+            return 0
+        now = await self._mt5.get_server_time(next(iter(bot_orders.values())).get("symbol", "XAUUSD"))
+        if not now:
+            return 0
+        done = 0
+        for t, d in bot_orders.items():
+            setup = d.get("time_setup")
+            if setup and now - setup > max_age_minutes * 60:
+                ok = await self._mt5.cancel_order(t)
+                done += bool(ok)
+                log.info(f"⌛ Ordre en attente #{t} ({d.get('comment')}) annulé : pas déclenché après "
+                         f"{(now - setup) / 60:.0f} min (BOT_PENDING_EXPIRY_MINUTES={max_age_minutes:g})")
+        if done:
+            self._forget_tracking(set(t for t in bot_orders if t not in (await self._mt5.get_active_state())["orders"]))
+        return done
+
     async def latest_signal_with_trades(self) -> Optional[int]:
         """msg_id du signal le plus récent qui a encore des positions/ordres du bot sur MT5."""
         try:

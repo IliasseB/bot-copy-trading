@@ -97,6 +97,9 @@ class BotConfig(BaseSettings):
         default=True,
         description="Un ordre clair posté SANS 'répondre' s'applique au dernier signal (s'il a des trades ouverts)",
     )
+    pending_expiry_minutes: float = Field(
+        default=0, description="Annule un ordre en attente non déclenché après X minutes (0 = jamais)",
+    )
     update_max_distance_percent: float = Field(
         default=3.0, description="SL/TP reçu par message à plus de X % de l'entrée = faute de frappe → ignoré",
     )
