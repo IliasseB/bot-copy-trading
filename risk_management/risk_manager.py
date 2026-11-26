@@ -11,6 +11,7 @@ from typing import Optional
 from config import RiskConfig
 from parser.signal_model import Direction, TradingSignal
 from utils.logger import get_logger
+from utils.trading_hours import is_trading_time
 
 log = get_logger("risk")
 
@@ -62,6 +63,10 @@ class RiskManager:
 
             if self._daily.emergency_stopped:
                 return RiskCheckResult(False, "DAILY_LOSS_LIMIT_HIT")
+
+            hours, days = getattr(self._cfg, "trading_hours", ""), getattr(self._cfg, "trading_days", "")
+            if (hours or days) and not is_trading_time(hours, days, self._now()):
+                return RiskCheckResult(False, f"Hors horaires de trading (heures='{hours}' jours='{days}')")
 
             # Chiffres en direct depuis MT5 si possible (sinon compteurs internes).
             # Avant, ces compteurs n'étaient jamais remis à jour à la fermeture des trades :
@@ -203,8 +208,15 @@ class RiskManager:
         log.warning(f"Marge insuffisante pour lot={lot} (requise={required:.2f}, libre={free:.2f}) — lot réduit à {fitted}")
         return round(fitted, 2), ""
 
+    @staticmethod
+    def _now():
+        from datetime import datetime
+        return datetime.now()
+
     def on_trade_opened(self) -> None:
         self._open_trades += 1
+        self._refresh_daily_stats()
+        self._daily.trades_opened += 1
 
     def on_trade_closed(self, pnl: float) -> None:
         self._open_trades = max(0, self._open_trades - 1)

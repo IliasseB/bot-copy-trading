@@ -63,6 +63,11 @@ class RiskConfig(BaseSettings):
     )
     max_lot: float = Field(default=1.0, description="Plafond dur du lot, quel que soit le calcul")
     margin_safety_ratio: float = Field(default=0.8, description="Part de la marge libre utilisable")
+    trading_hours: str = Field(
+        default="", description='Heures où le bot ouvre des trades, ex "08:00-22:00" (vide = toujours)',
+    )
+    trading_days: str = Field(default="", description='Jours de trading, ex "1-5" = lundi→vendredi (vide = tous)')
+    max_trades_per_day: int = Field(default=0, description="Nombre max de signaux tradés par jour (0 = illimité)")
     max_entry_distance_percent: float = Field(
         default=1.0,
         description="Refuse un signal dont l'entrée est à plus de X % du prix actuel (faute de frappe)",
