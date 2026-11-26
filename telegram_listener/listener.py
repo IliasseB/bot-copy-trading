@@ -27,9 +27,10 @@ UNKNOWN_IMG_DIR   = os.path.join("logs", "images_inconnues")
 
 
 class TelegramListener:
-    def __init__(self, config: TelegramConfig, on_message: SignalCallback):
+    def __init__(self, config: TelegramConfig, on_message: SignalCallback, on_ready=None):
         self._cfg = config
         self._on_message = on_message
+        self._on_ready = on_ready          # appelé une fois connecté (ex: brancher les notifications)
         self._group_ids: List = config.group_id_list
         self._client = TelegramClient(
             config.session_name,
@@ -62,11 +63,17 @@ class TelegramListener:
             await self._handle(event.message, is_edit=True, source="push")
 
         self._running = True
+        if self._on_ready:
+            self._on_ready()
         await self._prime_seen_ids()
         asyncio.create_task(self._poll_loop(), name="poll")
 
         log.info(f"✅ Bot en écoute — temps réel + vérification du canal toutes les {self._poll_interval:g}s...")
         await self._client.run_until_disconnected()
+
+    async def send_to_self(self, text: str) -> None:
+        """Envoie un message dans tes "Messages enregistrés" (notifications du bot)."""
+        await self._client.send_message("me", text)
 
     async def stop(self) -> None:
         self._running = False
