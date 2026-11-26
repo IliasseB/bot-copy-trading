@@ -1,0 +1,12 @@
+# Fins de ligne cohérentes entre Windows et GitHub
+* text=auto
+*.py text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.ini text eol=lf
+*.txt text eol=lf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.jpg binary
+*.png binary
