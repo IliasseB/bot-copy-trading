@@ -29,11 +29,9 @@ Je développe un bot de copy-trading automatique en Python. Le bot écoute en te
 - Session Telethon : fichier `trading_bot.session` (créé au 1er lancement)
 
 ### MetaTrader 5 — Pepperstone Démo
-- Login : `62123245`
-- Password : `*Uhkfe7qrl`
+- Login / mot de passe : dans le `.env` (`MT5_LOGIN`, `MT5_PASSWORD`) — jamais dans ce fichier
 - Server : `PepperstoneUK-Demo`
 - Path MT5 : `C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe`
-- Balance démo : 50 000 EUR
 - **Symbole de l'or sur Pepperstone MT5 : `XAUUSD`** (pas XAUUSDm)
 
 ### Risk Management
