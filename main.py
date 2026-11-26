@@ -26,6 +26,7 @@ from parser.regex_parser import looks_like_signal
 from parser.update_parser import parse_update, parse_update_no_reply
 from risk_management.risk_manager import RiskManager
 from telegram_listener.listener import TelegramListener
+from utils.heartbeat import write_heartbeat
 from utils.notifier import Notifier
 from utils.report import format_daily_report
 from utils.state_store import StateStore
@@ -137,6 +138,7 @@ class TradingBot:
                         await self._executor.expire_pending_orders(expiry)
                 if tick % 30 == 0:
                     await self._maybe_send_daily_report()
+                    self._write_heartbeat()
             except Exception as e:
                 log.error(f"Erreur dans la boucle de monitoring BE: {e}")
             tick += 1
@@ -247,6 +249,15 @@ class TradingBot:
         deals = await self._mt5.get_day_deals()
         self._notify(format_daily_report(deals, now.date()))
         log.info("📊 Récap du jour envoyé sur Telegram")
+
+    def _write_heartbeat(self) -> None:
+        try:
+            write_heartbeat({
+                "last_signal_msg_id": self._last_signal_msg_id,
+                "tracked_trades": len(getattr(self._executor, "_tracked_trades", []) or []),
+            })
+        except OSError as e:
+            log.debug(f"Heartbeat non écrit: {e}")
 
     def _notify(self, text: str) -> None:
         notifier = getattr(self, "_notifier", None)
