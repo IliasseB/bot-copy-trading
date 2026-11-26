@@ -4,6 +4,7 @@ utils/logger.py - Structured logging simplifié et robuste.
 from __future__ import annotations
 
 import logging
+import logging.handlers
 import sys
 import time
 from pathlib import Path
@@ -39,7 +40,8 @@ def setup_logging(level: str = "INFO", log_file: str = "bot.log",
 
     handlers = [
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler(LOG_DIR / log_file, encoding="utf-8"),
+        # 5 fichiers de 5 Mo max : le log ne grossit plus indéfiniment (bot.log faisait 300 Ko+ en quelques semaines)
+        logging.handlers.RotatingFileHandler(LOG_DIR / log_file, maxBytes=5_000_000, backupCount=5, encoding="utf-8"),
     ]
 
     logging.basicConfig(
