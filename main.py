@@ -26,6 +26,7 @@ from parser.regex_parser import looks_like_signal
 from parser.update_parser import parse_update, parse_update_no_reply
 from risk_management.risk_manager import RiskManager
 from telegram_listener.listener import TelegramListener
+from utils.instance_lock import AlreadyRunningError, InstanceLock
 from utils.logger import get_logger, setup_logging
 
 try:
@@ -308,6 +309,12 @@ def main() -> None:
     print("=" * 55)
     print("✅ uvloop actif" if UVLOOP_ACTIVE else "⚠️  uvloop non disponible — asyncio standard")
 
+    try:
+        lock = InstanceLock().acquire()
+    except AlreadyRunningError as e:
+        print(f"⛔ {e}")
+        sys.exit(2)
+
     bot = TradingBot()
     try:
         asyncio.run(bot.run())
@@ -318,6 +325,8 @@ def main() -> None:
         import traceback
         traceback.print_exc()
         sys.exit(1)
+    finally:
+        lock.release()
 
 
 if __name__ == "__main__":
