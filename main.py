@@ -57,10 +57,7 @@ class TradingBot:
         self._last_signal_msg_id: Optional[int] = None   # dernier signal vu sur le canal
         # Mémoire sur disque : après un redémarrage, les réponses et ordres sans "répondre"
         # retrouvent toujours leur signal
-        self._state = StateStore()
-        saved = self._state.load()
-        self._reply_root = {int(k): int(v) for k, v in saved.get("reply_root", {}).items()}
-        self._last_signal_msg_id = saved.get("last_signal_msg_id")
+        self._restore(StateStore())
         # Tâche d'arrière-plan pour surveiller le Break-Even
         self._monitor_task: Optional[asyncio.Task] = None
 
@@ -220,6 +217,12 @@ class TradingBot:
             f"conf={confidence:.2f} parse_ms={parse_ms:.1f}ms"
         )
         await self._execute_and_log(signal, t0)
+
+    def _restore(self, state: StateStore) -> None:
+        self._state = state
+        saved = state.load()
+        self._reply_root = {int(k): int(v) for k, v in saved.get("reply_root", {}).items()}
+        self._last_signal_msg_id = saved.get("last_signal_msg_id")
 
     def _persist(self) -> None:
         state = getattr(self, "_state", None)
