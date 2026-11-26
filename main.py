@@ -16,7 +16,7 @@ try:
 except ImportError:
     UVLOOP_ACTIVE = False
 
-from config import get_config
+from config import get_config, reveal
 from database.db import Database
 from execution.mt5_bridge import MT5Bridge
 from execution.trade_executor import TradeExecutor
@@ -57,7 +57,9 @@ class TradingBot:
         self._monitor_task: Optional[asyncio.Task] = None
 
     async def startup(self) -> None:
-        setup_logging(self._cfg.bot.log_level)
+        tg, m5 = self._cfg.telegram, self._cfg.mt5
+        setup_logging(self._cfg.bot.log_level,
+                      secrets=[tg.phone, tg.phone.lstrip("+"), reveal(tg.api_hash), reveal(m5.password)])
         log.info(f"=== BOT DÉMARRAGE === env={self._cfg.bot.env} uvloop={UVLOOP_ACTIVE}")
 
         try:
