@@ -261,11 +261,16 @@ class TradingBot:
                 f"🎯 {label} — Ticket Principal={result.ticket} "
                 f"prix={result.filled_price} total={total_ms:.1f}ms"
             )
+            tps = ", ".join("OPEN" if tp is None else f"{tp:g}" for tp in (signal.take_profits or [])) or "—"
+            self._notify(f"🎯 {signal.direction} {signal.symbol} ouvert à {result.filled_price} "
+                         f"(lot {result.lot_size}) — SL {signal.stop_loss} — TP {tps} — signal #{signal.telegram_msg_id}")
         else:
             log.warning(
                 f"⛔ Ordre non exécuté — status={result.status} "
                 f"raison={result.error_message}"
             )
+            self._notify(f"⛔ Signal #{signal.telegram_msg_id} ({signal.direction} {signal.symbol}) non tradé : "
+                         f"{result.error_message}")
 
         if self._db:
             await self._db.save_signal(result)
