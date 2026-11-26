@@ -105,6 +105,9 @@ class BotConfig(BaseSettings):
     notify: bool = Field(
         default=False, description="Notifications du bot dans tes Messages enregistrés Telegram",
     )
+    daily_report_hour: int = Field(
+        default=22, description="Heure (0-23) du récap du jour sur Telegram si BOT_NOTIFY=true (-1 = jamais)",
+    )
     pending_expiry_minutes: float = Field(
         default=0, description="Annule un ordre en attente non déclenché après X minutes (0 = jamais)",
     )

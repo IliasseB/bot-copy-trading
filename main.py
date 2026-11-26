@@ -27,6 +27,7 @@ from parser.update_parser import parse_update, parse_update_no_reply
 from risk_management.risk_manager import RiskManager
 from telegram_listener.listener import TelegramListener
 from utils.notifier import Notifier
+from utils.report import format_daily_report
 from utils.state_store import StateStore
 from utils.instance_lock import AlreadyRunningError, InstanceLock
 from utils.logger import get_logger, setup_logging
@@ -134,6 +135,8 @@ class TradingBot:
                     await self._executor.monitor_and_adjust_be()
                     if expiry > 0 and tick % 15 == 0:          # ordres en attente : vérif toutes les 15 s
                         await self._executor.expire_pending_orders(expiry)
+                if tick % 30 == 0:
+                    await self._maybe_send_daily_report()
             except Exception as e:
                 log.error(f"Erreur dans la boucle de monitoring BE: {e}")
             tick += 1
@@ -230,6 +233,20 @@ class TradingBot:
             f"conf={confidence:.2f} parse_ms={parse_ms:.1f}ms"
         )
         await self._execute_and_log(signal, t0)
+
+    async def _maybe_send_daily_report(self) -> None:
+        """Envoie le récap du jour une fois, à l'heure BOT_DAILY_REPORT_HOUR."""
+        from datetime import datetime
+        hour = int(getattr(self._cfg.bot, "daily_report_hour", -1))
+        now = datetime.now()
+        if hour < 0 or now.hour != hour or getattr(self, "_last_report_day", None) == now.date():
+            return
+        self._last_report_day = now.date()
+        if self._mt5 is None or not getattr(self._cfg.bot, "notify", False):
+            return
+        deals = await self._mt5.get_day_deals()
+        self._notify(format_daily_report(deals, now.date()))
+        log.info("📊 Récap du jour envoyé sur Telegram")
 
     def _notify(self, text: str) -> None:
         notifier = getattr(self, "_notifier", None)
