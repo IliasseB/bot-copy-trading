@@ -122,13 +122,18 @@ class TradingBot:
     async def _monitor_loop(self) -> None:
         """Boucle d'arrière-plan autonome vérifiant le statut des TP toutes les secondes."""
         log.info("🔄 Boucle de monitoring Multi-TP (BE) démarrée")
+        expiry = float(getattr(self._cfg.bot, "pending_expiry_minutes", 0) or 0)
+        tick = 0
         while True:
             try:
                 if self._executor:
                     await self._executor.monitor_and_adjust_be()
+                    if expiry > 0 and tick % 15 == 0:          # ordres en attente : vérif toutes les 15 s
+                        await self._executor.expire_pending_orders(expiry)
             except Exception as e:
                 log.error(f"Erreur dans la boucle de monitoring BE: {e}")
-            await asyncio.sleep(1.0) # Fréquence de rafraîchissement d'une seconde
+            tick += 1
+            await asyncio.sleep(1.0)  # Fréquence de rafraîchissement d'une seconde
 
     async def shutdown(self) -> None:
         log.info("Arrêt du bot...")
