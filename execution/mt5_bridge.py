@@ -514,6 +514,7 @@ class MT5Bridge:
         Chiffres de risque lus EN DIRECT sur MT5 (fiables même après un redémarrage) :
           open_signals : nombre de signaux qui ont encore une position ou un ordre en attente
           pnl_today    : gains/pertes RÉALISÉS aujourd'hui par le bot (profit + commission + swap)
+          signals_today: nombre de signaux tradés aujourd'hui
         """
         await self.ensure_connected()
         if not MT5_AVAILABLE:
@@ -536,7 +537,12 @@ class MT5Bridge:
             for d in deals:
                 if d.position_id in bot_positions and d.time >= start_ts - 3 * 3600:
                     pnl += d.profit + d.commission + d.swap + getattr(d, "fee", 0.0)
-            return {"open_signals": len(ids), "pnl_today": round(pnl, 2)}
+            # signaux réellement tradés aujourd'hui (au moins une entrée exécutée)
+            today = {(_re.match(r"TG#(\d+)_", d.comment or "") or [None, None])[1]
+                     for d in deals if d.magic == self.BOT_MAGIC and d.entry == mt5.DEAL_ENTRY_IN
+                     and d.time >= start_ts - 3 * 3600}
+            today.discard(None)
+            return {"open_signals": len(ids), "pnl_today": round(pnl, 2), "signals_today": len(today)}
 
         try:
             return await self._run(_get)
