@@ -80,6 +80,12 @@ class RiskManager:
             if open_trades >= self._cfg.max_simultaneous_trades:
                 return RiskCheckResult(False, f"Max simultaneous trades reached ({open_trades}/{self._cfg.max_simultaneous_trades})")
 
+            max_day = int(getattr(self._cfg, "max_trades_per_day", 0) or 0)
+            if max_day > 0:
+                done_today = stats.get("signals_today", self._daily.trades_opened) if stats else self._daily.trades_opened
+                if done_today >= max_day:
+                    return RiskCheckResult(False, f"Limite de {max_day} signal(aux) par jour atteinte ({done_today})")
+
             if current_spread_points > self._cfg.max_spread_points:
                 return RiskCheckResult(False, f"Spread too wide: {current_spread_points} > {self._cfg.max_spread_points}")
 
