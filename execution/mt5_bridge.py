@@ -497,6 +497,36 @@ class MT5Bridge:
 
         return await self._run(_get)
 
+    async def get_day_deals(self) -> list:
+        """Sorties (clôtures) des positions du bot aujourd'hui : [{signal, profit, volume, reason}]."""
+        await self.ensure_connected()
+        if not MT5_AVAILABLE:
+            return []
+
+        def _get():
+            import re as _re
+            from datetime import datetime as _dt, timedelta as _td
+            start = _dt.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            deals = mt5.history_deals_get(start - _td(hours=3), _dt.now() + _td(hours=3)) or []
+            opened = {}
+            for d in deals:
+                if d.magic == self.BOT_MAGIC and d.entry == mt5.DEAL_ENTRY_IN:
+                    m = _re.match(r"TG#(\d+)_", d.comment or "")
+                    opened[d.position_id] = int(m.group(1)) if m else None
+            out = []
+            for d in deals:
+                if d.position_id in opened and d.entry in (mt5.DEAL_ENTRY_OUT, getattr(mt5, "DEAL_ENTRY_OUT_BY", -1)):
+                    reason = {mt5.DEAL_REASON_TP: "TP", mt5.DEAL_REASON_SL: "SL"}.get(d.reason, "manuel")
+                    out.append({"signal": opened[d.position_id], "volume": d.volume, "reason": reason,
+                                "profit": round(d.profit + d.commission + d.swap + getattr(d, "fee", 0.0), 2)})
+            return out
+
+        try:
+            return await self._run(_get)
+        except Exception as e:
+            log.warning(f"Historique du jour indisponible: {e}")
+            return []
+
     async def get_server_time(self, symbol: str = "XAUUSD") -> Optional[int]:
         """Heure actuelle du SERVEUR MT5 (même référence que time_setup des ordres)."""
         await self.ensure_connected()
