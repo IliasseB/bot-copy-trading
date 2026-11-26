@@ -12,9 +12,10 @@ import re
 import sys
 from datetime import datetime
 
+from execution.mt5_bridge import MT5Bridge
 from utils.heartbeat import read_heartbeat
 
-BOT_MAGIC = 202401
+BOT_MAGIC = MT5Bridge.BOT_MAGIC   # identifiant des ordres du bot sur MT5
 
 
 def main() -> int:
