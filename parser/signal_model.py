@@ -8,7 +8,7 @@ import uuid
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class Direction(str, Enum):
@@ -65,8 +65,7 @@ class TradingSignal(BaseModel):
     lot_size:      Optional[float] = None
     error_message: Optional[str]   = None
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
     @field_validator("symbol")
     @classmethod
