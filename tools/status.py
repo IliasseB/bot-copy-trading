@@ -1,4 +1,4 @@
-"""
+r"""
 tools/status.py - "Est-ce que mon bot tourne, et qu'a-t-il d'ouvert ?"
 
     venv\Scripts\python.exe -m tools.status
