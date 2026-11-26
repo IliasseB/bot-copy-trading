@@ -34,19 +34,12 @@ python -m pip install --upgrade pip --quiet
 :: 5. Installer les dependances
 echo.
 echo [4/5] Installation des packages Python...
-pip install telethon==1.36.0 --quiet
-pip install asyncpg==0.29.0 --quiet
-pip install "redis[hiredis]==5.0.3" --quiet
-pip install SQLAlchemy==2.0.28 --quiet
-pip install python-dotenv==1.0.1 --quiet
-pip install "pydantic==2.6.3" --quiet
-pip install "pydantic-settings==2.2.1" --quiet
-pip install structlog==24.1.0 --quiet
-pip install orjson==3.9.15 --quiet
-pip install tenacity==8.2.3 --quiet
-pip install Pillow --quiet
-pip install MetaTrader5 --quiet
-pip install uvloop --quiet 2>nul || echo [INFO] uvloop non dispo sur Windows, on continue sans
+pip install -r requirements.txt --quiet
+IF %ERRORLEVEL% NEQ 0 (
+    echo [ERREUR] Installation des packages echouee. Verifie ta connexion internet.
+    pause
+    exit /b 1
+)
 echo [OK] Packages installes
 
 :: 6. Telecharger Docker Desktop si pas present
