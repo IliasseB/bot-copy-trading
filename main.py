@@ -26,6 +26,7 @@ from parser.regex_parser import looks_like_signal
 from parser.update_parser import parse_update, parse_update_no_reply
 from risk_management.risk_manager import RiskManager
 from telegram_listener.listener import TelegramListener
+from utils.notifier import Notifier
 from utils.state_store import StateStore
 from utils.instance_lock import AlreadyRunningError, InstanceLock
 from utils.logger import get_logger, setup_logging
@@ -58,6 +59,7 @@ class TradingBot:
         # Mémoire sur disque : après un redémarrage, les réponses et ordres sans "répondre"
         # retrouvent toujours leur signal
         self._restore(StateStore())
+        self._notifier = Notifier(enabled=bool(getattr(self._cfg.bot, "notify", False)))
         # Tâche d'arrière-plan pour surveiller le Break-Even
         self._monitor_task: Optional[asyncio.Task] = None
 
@@ -112,6 +114,7 @@ class TradingBot:
         self._listener = TelegramListener(
             config=self._cfg.telegram,
             on_message=self._on_telegram_message,
+            on_ready=lambda: self._notifier.attach(self._listener.send_to_self),
         )
 
         # 🚀 LANCEMENT DE LA BOUCLE DE SURVEILLANCE BE EN ARRIÈRE-PLAN
@@ -145,6 +148,10 @@ class TradingBot:
             except asyncio.CancelledError:
                 pass
 
+        notifier = getattr(self, "_notifier", None)
+        if notifier:
+            await notifier.flush()
+            notifier.stop()
         if self._listener:  await self._listener.stop()
         if self._mt5:       await self._mt5.disconnect()
         if self._db:        await self._db.disconnect()
@@ -222,6 +229,11 @@ class TradingBot:
             f"conf={confidence:.2f} parse_ms={parse_ms:.1f}ms"
         )
         await self._execute_and_log(signal, t0)
+
+    def _notify(self, text: str) -> None:
+        notifier = getattr(self, "_notifier", None)
+        if notifier:
+            notifier.notify(text)
 
     def _restore(self, state: StateStore) -> None:
         self._state = state

@@ -102,6 +102,9 @@ class BotConfig(BaseSettings):
         default=True,
         description="Un ordre clair posté SANS 'répondre' s'applique au dernier signal (s'il a des trades ouverts)",
     )
+    notify: bool = Field(
+        default=False, description="Notifications du bot dans tes Messages enregistrés Telegram",
+    )
     pending_expiry_minutes: float = Field(
         default=0, description="Annule un ordre en attente non déclenché après X minutes (0 = jamais)",
     )
