@@ -35,7 +35,7 @@ _RE_ENTRY_RANGE = re.compile(
     re.IGNORECASE
 )
 _RE_ENTRY_SINGLE = re.compile(
-    r'(?:ENTRY|ENTR[EÉ]E|PE|POINT\s*D.ENTR[EÉ]E)\s*:?\s*(\d{3,6}(?:[.,]\d{1,2})?)',
+    r'(?:(?:ENTRY|ENTR[EÉ]E|PE|POINT\s*D.ENTR[EÉ]E)\s*:?|@)\s*(\d{3,6}(?:[.,]\d{1,2})?)',   # "ENTRY : 3360" ou "@3360"
     re.IGNORECASE
 )
 _RE_SL = re.compile(r'\bSL\s*:?\s*(\d{3,6}(?:[.,]\d{1,2})?)', re.IGNORECASE)
