@@ -71,6 +71,12 @@ class TradingBot:
         setup_logging(self._cfg.bot.log_level,
                       secrets=[tg.phone, tg.phone.lstrip("+"), reveal(tg.api_hash), reveal(m5.password)])
         log.info(f"=== BOT DÉMARRAGE === env={self._cfg.bot.env} uvloop={UVLOOP_ACTIVE}")
+        r, b = self._cfg.risk, self._cfg.bot
+        lot = f"{r.lot_per_tp} par TP (max {r.max_lot})" if r.lot_per_tp > 0 else f"{r.fixed_lot or 'auto'} (max {r.max_lot})"
+        log.info(f"[CONFIG] Lot : {lot} — trades simultanés max {r.max_simultaneous_trades} — "
+                 f"perte max/jour {r.max_daily_loss_percent or 'aucune'}%")
+        log.info(f"[CONFIG] Horaires : {r.trading_hours or 'toujours'} / jours {r.trading_days or 'tous'} — "
+                 f"max {r.max_trades_per_day or '∞'} signal(aux)/jour — notifications {'oui' if b.notify else 'non'}")
         problems = check_config(self._cfg)
         for level, msg in problems:
             (log.error if level == "ERREUR" else log.warning if level == "ATTENTION" else log.info)(f"[CONFIG] {msg}")
