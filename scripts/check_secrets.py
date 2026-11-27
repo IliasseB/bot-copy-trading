@@ -81,6 +81,11 @@ def _git(*args: str) -> str:
 
 
 def main(argv: List[str]) -> int:
+    for stream in (sys.stdout, sys.stderr):      # console Windows (cp1252) : pas de plantage sur ⛔
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
     secrets = env_secrets()
     if "--staged" in argv:
         files = [f for f in _git("diff", "--cached", "--name-only", "--diff-filter=ACMR").splitlines() if f]
