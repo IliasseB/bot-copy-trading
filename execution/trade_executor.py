@@ -130,7 +130,7 @@ class TradeExecutor:
         }
 
         # ── Envoi des ordres sur MT5 ──────────────────────────────────────
-        for i, (p_lot, tp_val) in enumerate(zip(lots_to_send, tps_cleaned)):
+        for i, (p_lot, tp_val) in enumerate(zip(lots_to_send, tps_cleaned, strict=True)):
             if p_lot <= 0:
                 continue
 
