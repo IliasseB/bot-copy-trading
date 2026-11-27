@@ -39,3 +39,26 @@ et les textes pédagogiques. Les règles ont été calibrées sur ~4000 messages
 | `UPDATE_BOT.bat` | récupère la dernière version et met à jour les packages |
 | `RUN_TESTS.bat` | lance les tests (aucun ordre réel, aucune connexion) |
 | `TEST_MT5.bat` | vérifie la connexion MT5 sans Telegram |
+
+## Réglages principaux (`.env`)
+
+| Variable | Défaut | Effet |
+|---|---|---|
+| `RISK_LOT_PER_TP` | 0 | lot par TP : 1 TP → 1 position, TP1 + TP2 → 2 positions |
+| `RISK_FIXED_LOT` | 0 | lot fixe si `RISK_LOT_PER_TP=0` (0 = calcul selon le risque) |
+| `RISK_MAX_LOT` | 1.0 | plafond dur du lot total d'un signal |
+| `RISK_MAX_SIMULTANEOUS_TRADES` | 5 | signaux ouverts en même temps |
+| `RISK_MAX_DAILY_LOSS_PERCENT` | 0 | arrêt du jour après X % de perte (0 = jamais) |
+| `RISK_MAX_TRADES_PER_DAY` | 0 | signaux tradés par jour (0 = illimité) |
+| `RISK_TRADING_HOURS` / `RISK_TRADING_DAYS` | vide | ex. `08:00-22:00` et `1-5` |
+| `RISK_MAX_ENTRY_DISTANCE_PERCENT` | 1.0 | entrée trop loin du prix = faute de frappe → refusé |
+| `EXECUTION_BE_OFFSET_POINTS` | 0 | BE à entrée + X points (couvre la commission) |
+| `BOT_PENDING_EXPIRY_MINUTES` | 0 | annule un ordre en attente après X min (0 = jamais) |
+| `BOT_UPDATE_PARTIAL_CLOSE` | true | applique « SÉCURISEZ 50 % » |
+| `BOT_UPDATE_NO_REPLY_FALLBACK` | true | un ordre clair posté sans « répondre » vise le dernier signal |
+| `BOT_NOTIFY` | false | le bot t'écrit dans tes Messages enregistrés Telegram |
+| `BOT_DAILY_REPORT_HOUR` | 22 | heure du récap du jour (-1 = jamais) |
+| `MT5_ALLOW_REAL` | false | sécurité : `true` obligatoire pour trader sur un compte réel |
+
+Au démarrage, le bot affiche un résumé de ces réglages et signale les combinaisons incohérentes
+(par ex. `RISK_MAX_LOT` trop petit pour ouvrir TP2).
