@@ -104,7 +104,7 @@ __**⚠️**__Disclaimer test"""
         line("   C'est un problème de regex, contacte le développeur")
         return
 
-    line(f"✅ Signal extrait avec succès :")
+    line("✅ Signal extrait avec succès :")
     line(f"   Direction : {signal.direction}")
     line(f"   Symbole   : {signal.symbol}")
     line(f"   Zone      : {signal.entry_low} - {signal.entry_high}")
@@ -115,7 +115,7 @@ __**⚠️**__Disclaimer test"""
     # ── ÉTAPE 6 : Demande confirmation avant d'exécuter un VRAI ordre ────
     step(6, "TEST D'EXÉCUTION RÉELLE SUR MT5 (compte DÉMO)")
     line("⚠️  Ce test va placer un VRAI ordre sur ton compte DÉMO Pepperstone")
-    line(f"   Lot : 0.01 (minimum)")
+    line("   Lot : 0.01 (minimum)")
     line(f"   Direction : {signal.direction}")
     line(f"   Prix approximatif : {current_price}")
     line()
@@ -146,7 +146,7 @@ __**⚠️**__Disclaimer test"""
 
     line()
     if result.status.value == "EXECUTED" if hasattr(result.status, 'value') else result.status == "EXECUTED":
-        line(f"🎯 SUCCÈS TOTAL — ORDRE PLACÉ SUR MT5 !")
+        line("🎯 SUCCÈS TOTAL — ORDRE PLACÉ SUR MT5 !")
         line(f"   Ticket      : {result.ticket}")
         line(f"   Prix rempli : {result.filled_price}")
         line(f"   Lot         : {result.lot_size}")
@@ -155,7 +155,7 @@ __**⚠️**__Disclaimer test"""
         line("👉 Va vérifier dans MT5 → onglet 'Trade' pour voir la position ouverte !")
         line("👉 Tu peux la fermer manuellement dans MT5 si c'était juste un test.")
     else:
-        line(f"❌ ÉCHEC DE L'EXÉCUTION")
+        line("❌ ÉCHEC DE L'EXÉCUTION")
         line(f"   Statut : {result.status}")
         line(f"   Raison : {result.error_message}")
 
