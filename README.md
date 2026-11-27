@@ -21,3 +21,21 @@ quand le canal les poste **en image**.
 
 Il ignore les conditions (« si on rejette… »), les conseils (« n'hésitez pas à… »), les infos (« +50 PIPS »)
 et les textes pédagogiques. Les règles ont été calibrées sur ~4000 messages réels du canal.
+
+## Installation (Windows)
+
+1. Installer **Python 3.12** (cocher « Add Python to PATH ») et **MetaTrader 5** de ton courtier.
+2. Double-cliquer sur `install_windows.bat` (crée le `venv` et installe les dépendances).
+3. Copier `.env.example` en `.env` et le remplir : clés Telegram (https://my.telegram.org),
+   identifiants MT5, ID du canal. **Ne jamais publier ce fichier.**
+4. Double-cliquer sur `INSTALL_HOOKS.bat` (bloque tout commit contenant un secret).
+5. Ouvrir MT5, se connecter, puis lancer `START_BOT.bat`.
+   La première fois, Telegram envoie un code sur ton téléphone : tape-le dans la fenêtre.
+
+| Script | Rôle |
+|---|---|
+| `START_BOT.bat` | lance le bot (refuse s'il tourne déjà) |
+| `STATUS_BOT.bat` | le bot tourne-t-il ? quelles positions a-t-il ? (lecture seule) |
+| `UPDATE_BOT.bat` | récupère la dernière version et met à jour les packages |
+| `RUN_TESTS.bat` | lance les tests (aucun ordre réel, aucune connexion) |
+| `TEST_MT5.bat` | vérifie la connexion MT5 sans Telegram |
