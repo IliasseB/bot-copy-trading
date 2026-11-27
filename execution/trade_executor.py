@@ -153,7 +153,8 @@ class TradeExecutor:
                     )
                 else:
                     entry = signal.entry or current_price
-                    log.info(f"⏳ EXECUTION PENDING (Partie {i+1}) — lot={p_lot} entry={entry} tp={tp_val if tp_val > 0 else 'OPEN'}")
+                    log.info(f"⏳ EXECUTION PENDING (Partie {i+1}) — lot={p_lot} entry={entry} "
+                             f"tp={tp_val if tp_val > 0 else 'OPEN'}")
                     res = await self._mt5.send_pending_order(
                         symbol=signal.symbol,
                         direction=signal.direction,
@@ -594,7 +595,8 @@ class TradeExecutor:
                 done += await self._close_many(msg_id, pos, "Fermeture du trade", cmd.only_profit)
                 done += await self._cancel_pending(msg_id, ords, "fermeture du trade")
                 self._forget_tracking(set(pos) | set(ords))
-                log.info(f"🚪 [UPDATE #{msg_id}] Fermeture demandée{' (positions en profit seulement)' if cmd.only_profit else ''}")
+                suffix = " (positions en profit seulement)" if cmd.only_profit else ""
+                log.info(f"🚪 [UPDATE #{msg_id}] Fermeture demandée{suffix}")
                 if not cmd.only_profit:
                     return done
                 continue

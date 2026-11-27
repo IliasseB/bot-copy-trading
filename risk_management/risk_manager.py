@@ -78,7 +78,8 @@ class RiskManager:
 
             open_trades = stats["open_signals"] if stats else self._open_trades
             if open_trades >= self._cfg.max_simultaneous_trades:
-                return RiskCheckResult(False, f"Max simultaneous trades reached ({open_trades}/{self._cfg.max_simultaneous_trades})")
+                limit = self._cfg.max_simultaneous_trades
+                return RiskCheckResult(False, f"Max simultaneous trades reached ({open_trades}/{limit})")
 
             max_day = int(getattr(self._cfg, "max_trades_per_day", 0) or 0)
             if max_day > 0:
