@@ -17,6 +17,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import re
 from typing import Optional, Tuple
 
 import numpy as np
@@ -40,6 +41,16 @@ LABEL_TO_TEXT = {
     "BE":      "METTEZ VOUS BE",
     "INFO":    None,             # "+30 PIPS", "LET'S GO" : info, aucune action
 }
+
+
+def label_text(label: Optional[str]) -> Optional[str]:
+    """Texte équivalent d'un label ; "TP3_HIT" (nouveau modèle ajouté plus tard) → "TP3 HIT"."""
+    if not label:
+        return None
+    if label in LABEL_TO_TEXT:
+        return LABEL_TO_TEXT[label]
+    m = re.fullmatch(r"TP(\d)_HIT", label)
+    return f"TP{m.group(1)} HIT" if m else None
 
 
 def dhash(image_bytes: bytes, n: int = 32) -> np.ndarray:
@@ -76,4 +87,4 @@ def classify(image_bytes: bytes) -> Tuple[Optional[str], int]:
 def image_to_text(image_bytes: bytes) -> Tuple[Optional[str], Optional[str], int]:
     """(texte équivalent ou None, label, distance)."""
     label, dist = classify(image_bytes)
-    return (LABEL_TO_TEXT.get(label) if label else None), label, dist
+    return label_text(label), label, dist

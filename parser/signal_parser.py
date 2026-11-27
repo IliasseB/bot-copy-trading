@@ -4,13 +4,13 @@ parser/signal_parser.py - Orchestrateur avec logs complets.
 from __future__ import annotations
 
 import hashlib
-import time
 from typing import Optional, Set, Tuple
+
+from utils.logger import get_logger
 
 from .nlp_parser import NLPParser
 from .regex_parser import RegexParser
 from .signal_model import TradingSignal
-from utils.logger import get_logger
 
 log = get_logger("parser")
 

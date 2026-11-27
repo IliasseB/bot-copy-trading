@@ -8,7 +8,7 @@ import uuid
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class Direction(str, Enum):
@@ -65,13 +65,34 @@ class TradingSignal(BaseModel):
     lot_size:      Optional[float] = None
     error_message: Optional[str]   = None
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
     @field_validator("symbol")
     @classmethod
     def symbol_upper(cls, v: str) -> str:
         return v.upper().strip()
+
+    @model_validator(mode="after")
+    def _niveaux_coherents(self):
+        """BUY : SL sous l'entrée et TP au-dessus ; SELL : l'inverse. Sinon = faute de frappe → refusé."""
+        levels = [x for x in (self.entry_low, self.entry_high, self.entry) if x]
+        if not levels:
+            return self
+        buy = str(getattr(self.direction, "value", self.direction)) == "BUY"
+        lo, hi = min(levels), max(levels)
+        if self.stop_loss is not None:
+            if buy and self.stop_loss >= lo:
+                raise ValueError(f"BUY avec SL {self.stop_loss} au-dessus de l'entrée {lo}")
+            if not buy and self.stop_loss <= hi:
+                raise ValueError(f"SELL avec SL {self.stop_loss} sous l'entrée {hi}")
+        for tp in self.take_profits:
+            if tp is None:
+                continue
+            if buy and tp <= lo:
+                raise ValueError(f"BUY avec TP {tp} sous l'entrée {lo}")
+            if not buy and tp >= hi:
+                raise ValueError(f"SELL avec TP {tp} au-dessus de l'entrée {hi}")
+        return self
 
     @property
     def primary_tp(self) -> Optional[float]:

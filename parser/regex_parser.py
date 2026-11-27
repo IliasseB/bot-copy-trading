@@ -6,10 +6,13 @@ from __future__ import annotations
 
 import re
 import time
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional, Tuple
+
+from pydantic import ValidationError
+
+from utils.logger import get_logger
 
 from .signal_model import Direction, OrderType, TradingSignal
-from utils.logger import get_logger
 
 log = get_logger("parser")
 
@@ -35,7 +38,7 @@ _RE_ENTRY_RANGE = re.compile(
     re.IGNORECASE
 )
 _RE_ENTRY_SINGLE = re.compile(
-    r'(?:ENTRY|ENTR[EÉ]E|PE|POINT\s*D.ENTR[EÉ]E)\s*:?\s*(\d{3,6}(?:[.,]\d{1,2})?)',
+    r'(?:(?:ENTRY|ENTR[EÉ]E|PE|POINT\s*D.ENTR[EÉ]E)\s*:?|@)\s*(\d{3,6}(?:[.,]\d{1,2})?)',   # "ENTRY : 3360" ou "@3360"
     re.IGNORECASE
 )
 _RE_SL = re.compile(r'\bSL\s*:?\s*(\d{3,6}(?:[.,]\d{1,2})?)', re.IGNORECASE)
@@ -181,6 +184,11 @@ class RegexParser:
                 parsed_at_ns=time.time_ns(),
             )
             return signal, confidence
+        except ValidationError as e:
+            why = "; ".join(err.get("msg", "").replace("Value error, ", "") for err in e.errors())
+            log.warning(f"[{msg_id}] ⛔ Signal incohérent ({why}) — faute de frappe probable, "
+                        f"on attend que le trader corrige le message")
+            return None, 0.0
         except Exception as e:
             log.error(f"[{msg_id}] Erreur création signal: {e}")
             return None, 0.0

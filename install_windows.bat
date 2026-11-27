@@ -4,8 +4,9 @@ echo   TELEGRAM TRADING BOT - INSTALLATION WINDOWS
 echo ============================================================
 echo.
 
-:: 1. Verifier Python
-python --version >nul 2>&1
+:: 1. Verifier Python (3.12 conseille : version testee avec MetaTrader5, les plus recentes n'ont pas toujours de paquet)
+py -3.12 --version >nul 2>&1 && (set "PYEXE=py -3.12") || (set "PYEXE=python")
+%PYEXE% --version >nul 2>&1
 IF %ERRORLEVEL% NEQ 0 (
     echo [ERREUR] Python n'est pas installe !
     echo Telecharge Python 3.12 sur https://python.org/downloads
@@ -18,7 +19,7 @@ echo [OK] Python detecte
 :: 2. Creer environnement virtuel
 echo.
 echo [1/5] Creation de l'environnement virtuel...
-python -m venv venv
+%PYEXE% -m venv venv
 echo [OK] venv cree
 
 :: 3. Activer venv
@@ -34,19 +35,12 @@ python -m pip install --upgrade pip --quiet
 :: 5. Installer les dependances
 echo.
 echo [4/5] Installation des packages Python...
-pip install telethon==1.36.0 --quiet
-pip install asyncpg==0.29.0 --quiet
-pip install "redis[hiredis]==5.0.3" --quiet
-pip install SQLAlchemy==2.0.28 --quiet
-pip install python-dotenv==1.0.1 --quiet
-pip install "pydantic==2.6.3" --quiet
-pip install "pydantic-settings==2.2.1" --quiet
-pip install structlog==24.1.0 --quiet
-pip install orjson==3.9.15 --quiet
-pip install tenacity==8.2.3 --quiet
-pip install Pillow --quiet
-pip install MetaTrader5 --quiet
-pip install uvloop --quiet 2>nul || echo [INFO] uvloop non dispo sur Windows, on continue sans
+pip install -r requirements.txt --quiet
+IF %ERRORLEVEL% NEQ 0 (
+    echo [ERREUR] Installation des packages echouee. Verifie ta connexion internet.
+    pause
+    exit /b 1
+)
 echo [OK] Packages installes
 
 :: 6. Telecharger Docker Desktop si pas present

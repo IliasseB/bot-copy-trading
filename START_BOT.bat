@@ -17,6 +17,11 @@ echo [BOT] Premiere fois = Telegram va demander un code de verification
 echo [BOT] Entre le code que tu recois sur ton telephone
 echo.
 "%PY%" main.py
+if %ERRORLEVEL% EQU 2 (
+    echo [BOT] Une autre fenetre du bot tourne deja : ferme-la, celle-ci s'arrete.
+    pause
+    exit /b 2
+)
 echo.
 echo [BOT] Arrete. Appuie sur une touche pour relancer.
 pause

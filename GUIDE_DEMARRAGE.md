@@ -49,7 +49,7 @@
 ## 📋 ÉTAPE 5 — Lance le bot
 
 1. Double-clique sur **`START_BOT.bat`**
-2. La **première fois**, Telegram va envoyer un code sur ton téléphone `+33XXXXXXXXX`
+2. La **première fois**, Telegram envoie un code sur le téléphone indiqué dans `TELEGRAM_PHONE` (fichier `.env`)
 3. Entre le code dans la console
 4. Le bot démarre et écoute le canal
 
@@ -84,3 +84,14 @@ Appuie sur **CTRL+C** dans la console
 ## 📊 Vérifier les trades exécutés
 
 Regarde dans MT5 → onglet **"Historique"** pour voir tous les ordres passés par le bot.
+
+
+---
+
+## 🆕 Au quotidien
+
+- **Le bot tourne-t-il ?** Double-clique sur `STATUS_BOT.bat` (affiche aussi ses positions).
+- **Être prévenu sur ton téléphone :** mets `BOT_NOTIFY=true` dans `.env` → le bot t'écrit dans
+  tes *Messages enregistrés* Telegram (trade ouvert, BE, clôtures, récap du soir).
+- **Mettre à jour :** `UPDATE_BOT.bat`.
+- **Ne lance jamais deux fois le bot** : la 2e fenêtre refuse de démarrer (ça protège ta session Telegram).

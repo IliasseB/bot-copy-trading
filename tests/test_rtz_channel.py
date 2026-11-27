@@ -251,3 +251,29 @@ async def test_sl_ne_recule_pas_une_jambe_deja_au_be():
     await bot._on_telegram_message("mettez vous BE", 901, 1, False, reply_to=900)
     await bot._on_telegram_message("❌ MODIFIER SL A 4060", 902, 1, False, reply_to=900)
     assert all(p["sl"] == 4068.0 for p in mt5.positions.values())
+
+
+@pytest.mark.parametrize("entry, sl, tp", [
+    ("4423", "4521", "4526"),        # #7273 : entrée tapée 4423 au lieu de 4523
+    ("4402-4495", "4493", "4408"),   # #7317 : zone inversée/fausse
+    ("3439-4332", "4327", "4349"),   # #9543 : 3439 au lieu de 4329
+])
+def test_signaux_reels_avec_faute_de_frappe_refuses(entry, sl, tp):
+    text = SIG.replace("4066-4069", entry).replace("SL : 4062", f"SL : {sl}").replace("TP1: 4072", f"TP1: {tp}")
+    sig, _ = RegexParser().parse(text, 1, 1)
+    assert sig is None
+
+
+@pytest.mark.asyncio
+async def test_ordre_sans_reponse_fonctionne_apres_redemarrage(tmp_path):
+    from utils.state_store import StateStore
+    mt5 = RichFakeMT5(price=4068.0)
+    bot = make_bot(mt5, lot=0.02)
+    bot._restore(StateStore(tmp_path / "state.json"))
+    await bot._on_telegram_message(SIG, 1000, 1, False)
+    # --- redémarrage : nouveau bot, même MT5, même fichier d'état ---
+    bot2 = make_bot(mt5, lot=0.02)
+    bot2._restore(StateStore(tmp_path / "state.json"))
+    assert bot2._last_signal_msg_id == 1000
+    await bot2._on_telegram_message("❌ MODIFIER SL A 4061", 1001, 1, False)     # sans "répondre"
+    assert all(p["sl"] == 4061.0 for p in mt5.positions.values())

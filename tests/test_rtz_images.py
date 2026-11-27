@@ -2,7 +2,6 @@
 Images de gestion du canal RTZ (vraies images, réduites à 400 px) : reconnaissance,
 traduction en ordre, et passage par le listener + le bot (MT5 simulé).
 """
-import asyncio
 import os
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
@@ -12,7 +11,7 @@ import pytest
 from parser.image_classifier import classify, image_to_text
 from parser.update_parser import parse_update
 from tests.test_listener import make_listener, run_poll
-from tests.test_rtz_channel import RichFakeMT5, SIG
+from tests.test_rtz_channel import SIG, RichFakeMT5
 from tests.test_updates import make_bot
 
 FIX = os.path.join(os.path.dirname(__file__), "fixtures", "rtz_images")

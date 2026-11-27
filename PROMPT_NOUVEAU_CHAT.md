@@ -19,21 +19,18 @@ Je développe un bot de copy-trading automatique en Python. Le bot écoute en te
 
 ---
 
-## CREDENTIALS & CONFIGURATION
+## CONFIGURATION (les secrets restent dans `.env`, jamais dans le dépôt)
 
 ### Telegram
-- api_id : `TON_API_ID`
-- api_hash : `TON_API_HASH`
-- Numéro : `+33XXXXXXXXX`
+- api_id / api_hash : dans le `.env` (`TELEGRAM_API_ID`, `TELEGRAM_API_HASH`), à créer sur https://my.telegram.org
+- Numéro : dans le `.env` (`TELEGRAM_PHONE`)
 - Canal surveillé : `-2422625648` (RentaTrade Z VIP — 5940 abonnés)
 - Session Telethon : fichier `trading_bot.session` (créé au 1er lancement)
 
 ### MetaTrader 5 — Pepperstone Démo
-- Login : `62123245`
-- Password : `*Uhkfe7qrl`
+- Login / mot de passe : dans le `.env` (`MT5_LOGIN`, `MT5_PASSWORD`) — jamais dans ce fichier
 - Server : `PepperstoneUK-Demo`
 - Path MT5 : `C:\Program Files\Pepperstone MetaTrader 5\terminal64.exe`
-- Balance démo : 50 000 EUR
 - **Symbole de l'or sur Pepperstone MT5 : `XAUUSD`** (pas XAUUSDm)
 
 ### Risk Management
@@ -44,7 +41,7 @@ Je développe un bot de copy-trading automatique en Python. Le bot écoute en te
 - Slippage max : 50 points
 
 ### Base de données
-- PostgreSQL : `postgresql://user:motdepasse@localhost:5432/trading_bot`
+- PostgreSQL : `DATABASE_URL` dans le `.env`
 - Redis : `redis://localhost:6379/0`
 - ⚠️ Le bot fonctionne SANS PostgreSQL et Redis (mode dégradé, logs d'avertissement normaux)
 

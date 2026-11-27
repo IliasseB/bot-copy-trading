@@ -7,8 +7,8 @@ from __future__ import annotations
 import time
 from typing import List, Optional, Tuple
 
-from .regex_parser import RegexParser, SYMBOL_ALIASES
-from .signal_model import Direction, OrderType, TradingSignal
+from .regex_parser import RegexParser
+from .signal_model import TradingSignal
 
 try:
     import spacy

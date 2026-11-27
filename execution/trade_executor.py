@@ -6,12 +6,13 @@ from __future__ import annotations
 
 import re
 import time
-from typing import Optional, List, Dict, Any, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
-from parser.signal_model import Direction, OrderType, SignalStatus, TradingSignal
-from risk_management.risk_manager import RiskManager, floor_to_step
+from parser.signal_model import SignalStatus, TradingSignal
 from parser.update_parser import UpdateCommand, resolve_price
+from risk_management.risk_manager import RiskManager, floor_to_step
 from utils.logger import get_logger
+
 from .mt5_bridge import MT5Bridge, MT5ConnectionError, MT5ExecutionError
 
 log = get_logger("executor")
@@ -129,7 +130,7 @@ class TradeExecutor:
         }
 
         # ── Envoi des ordres sur MT5 ──────────────────────────────────────
-        for i, (p_lot, tp_val) in enumerate(zip(lots_to_send, tps_cleaned)):
+        for i, (p_lot, tp_val) in enumerate(zip(lots_to_send, tps_cleaned, strict=True)):
             if p_lot <= 0:
                 continue
 
@@ -152,7 +153,8 @@ class TradeExecutor:
                     )
                 else:
                     entry = signal.entry or current_price
-                    log.info(f"⏳ EXECUTION PENDING (Partie {i+1}) — lot={p_lot} entry={entry} tp={tp_val if tp_val > 0 else 'OPEN'}")
+                    log.info(f"⏳ EXECUTION PENDING (Partie {i+1}) — lot={p_lot} entry={entry} "
+                             f"tp={tp_val if tp_val > 0 else 'OPEN'}")
                     res = await self._mt5.send_pending_order(
                         symbol=signal.symbol,
                         direction=signal.direction,
@@ -193,8 +195,9 @@ class TradeExecutor:
         filled = filled_prices[0] if filled_prices else current_price
         exec_ms = (time.time_ns() - t_start) / 1_000_000
 
-        if signal.entry:
-            self._risk.check_slippage(signal.entry, filled, signal.symbol)
+        ref = self._slippage_reference(signal, filled)
+        if ref is not None:
+            self._risk.check_slippage(ref, filled, signal.symbol)
 
         signal = signal.model_copy(update={
             "status":        SignalStatus.EXECUTED,
@@ -206,6 +209,19 @@ class TradeExecutor:
 
         log.info(f"🎯 PIPELINE MULTI-TP REUSSI — Tickets={tickets} | Temps={exec_ms:.0f}ms")
         return signal
+
+    @staticmethod
+    def _slippage_reference(signal: TradingSignal, filled: float) -> Optional[float]:
+        """Prix de référence du glissement : rempli DANS la zone = pas de glissement ;
+        sinon on mesure par rapport au bord de zone le plus proche."""
+        lo = signal.entry_low or signal.entry
+        hi = signal.entry_high or signal.entry
+        if lo is None or hi is None or not filled:
+            return None
+        lo, hi = min(lo, hi), max(lo, hi)
+        if lo <= filled <= hi:
+            return None
+        return lo if filled < lo else hi
 
     # ── BREAK-EVEN ────────────────────────────────────────────────────────────
 
@@ -579,7 +595,8 @@ class TradeExecutor:
                 done += await self._close_many(msg_id, pos, "Fermeture du trade", cmd.only_profit)
                 done += await self._cancel_pending(msg_id, ords, "fermeture du trade")
                 self._forget_tracking(set(pos) | set(ords))
-                log.info(f"🚪 [UPDATE #{msg_id}] Fermeture demandée{' (positions en profit seulement)' if cmd.only_profit else ''}")
+                suffix = " (positions en profit seulement)" if cmd.only_profit else ""
+                log.info(f"🚪 [UPDATE #{msg_id}] Fermeture demandée{suffix}")
                 if not cmd.only_profit:
                     return done
                 continue
@@ -672,6 +689,38 @@ class TradeExecutor:
                     done += bool(ok)
                     log.info(f"{'✅' if ok else '❌'} [UPDATE #{msg_id}] TP ticket #{t} → {tp}")
         return done
+
+    async def expire_pending_orders(self, max_age_minutes: float) -> int:
+        """
+        Annule les ordres en attente du bot plus vieux que `max_age_minutes`.
+        Un ordre au bord de la zone qui n'est toujours pas déclenché longtemps après
+        le signal correspond à un setup que le canal a abandonné.
+        """
+        if not max_age_minutes or max_age_minutes <= 0:
+            return 0
+        try:
+            state = await self._mt5.get_active_state()
+        except Exception:
+            return 0
+        bot_orders = {t: d for t, d in state["orders"].items()
+                      if re.match(r"^TG#\d+_", d.get("comment") or "")
+                      and d.get("magic", MT5Bridge.BOT_MAGIC) == MT5Bridge.BOT_MAGIC}
+        if not bot_orders:
+            return 0
+        now = await self._mt5.get_server_time(next(iter(bot_orders.values())).get("symbol", "XAUUSD"))
+        if not now:
+            return 0
+        cancelled = set()
+        for t, d in bot_orders.items():
+            setup = d.get("time_setup")
+            if setup and now - setup > max_age_minutes * 60:
+                if await self._mt5.cancel_order(t):
+                    cancelled.add(t)
+                    log.info(f"⌛ Ordre en attente #{t} ({d.get('comment')}) annulé : pas déclenché après "
+                             f"{(now - setup) / 60:.0f} min (BOT_PENDING_EXPIRY_MINUTES={max_age_minutes:g})")
+        if cancelled:
+            self._forget_tracking(cancelled)
+        return len(cancelled)
 
     async def latest_signal_with_trades(self) -> Optional[int]:
         """msg_id du signal le plus récent qui a encore des positions/ordres du bot sur MT5."""

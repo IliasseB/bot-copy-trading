@@ -4,21 +4,49 @@ utils/logger.py - Structured logging simplifié et robuste.
 from __future__ import annotations
 
 import logging
+import logging.handlers
 import sys
-import time
 from pathlib import Path
-from typing import Any
+from typing import Iterable, Optional
 
 LOG_DIR = Path(__file__).parent.parent / "logs"
 LOG_DIR.mkdir(exist_ok=True)
 
 
-def setup_logging(level: str = "INFO", log_file: str = "bot.log") -> None:
+class SecretMaskingFilter(logging.Filter):
+    """Remplace toute valeur secrète (n° de téléphone, api_hash, mots de passe) par ***
+    dans les lignes de log, y compris celles écrites par Telethon ou MetaTrader5."""
+
+    def __init__(self, secrets: Iterable[str] = ()):
+        super().__init__()
+        self._secrets = sorted({s for s in secrets if s and len(s) >= 4}, key=len, reverse=True)
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if not self._secrets:
+            return True
+        msg = record.getMessage()
+        masked = msg
+        for s in self._secrets:
+            masked = masked.replace(s, "***")
+        if masked != msg:
+            record.msg, record.args = masked, ()
+        return True
+
+
+def setup_logging(level: str = "INFO", log_file: str = "bot.log",
+                  secrets: Optional[Iterable[str]] = None) -> None:
     log_level = getattr(logging, level.upper(), logging.INFO)
+    # Console Windows (cp1252) : les accents et emojis s'affichaient en "m�me" → UTF-8 forcé
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
 
     handlers = [
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler(LOG_DIR / log_file, encoding="utf-8"),
+        # 5 fichiers de 5 Mo max : le log ne grossit plus indéfiniment (bot.log faisait 300 Ko+ en quelques semaines)
+        logging.handlers.RotatingFileHandler(LOG_DIR / log_file, maxBytes=5_000_000, backupCount=5, encoding="utf-8"),
     ]
 
     logging.basicConfig(
@@ -27,6 +55,10 @@ def setup_logging(level: str = "INFO", log_file: str = "bot.log") -> None:
         level=log_level,
         force=True,
     )
+    if secrets:
+        mask = SecretMaskingFilter(secrets)
+        for h in logging.getLogger().handlers:
+            h.addFilter(mask)
 
 
 def get_logger(name: str) -> logging.Logger:

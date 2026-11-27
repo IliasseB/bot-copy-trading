@@ -9,8 +9,9 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
-from config import MT5Config
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
+
+from config import MT5Config, reveal
 from utils.logger import get_logger
 
 log = get_logger("mt5")
@@ -73,7 +74,7 @@ class MT5Bridge:
     def _connect_sync(self) -> bool:
         kwargs = dict(
             login=self._cfg.login,
-            password=self._cfg.password,
+            password=reveal(self._cfg.password),
             server=self._cfg.server,
             timeout=self._cfg.timeout,
         )
@@ -491,8 +492,52 @@ class MT5Bridge:
                     "comment": o.comment, "magic": o.magic, "symbol": o.symbol,
                     "price_open": o.price_open, "sl": o.sl, "tp": o.tp,
                     "type": "BUY" if o.type in buy_types else "SELL",
+                    "time_setup": o.time_setup,      # heure serveur de création de l'ordre
                 }
             return {"positions": positions, "orders": orders}
+
+        return await self._run(_get)
+
+    async def get_day_deals(self) -> list:
+        """Sorties (clôtures) des positions du bot aujourd'hui : [{signal, profit, volume, reason}]."""
+        await self.ensure_connected()
+        if not MT5_AVAILABLE:
+            return []
+
+        def _get():
+            import re as _re
+            from datetime import datetime as _dt
+            from datetime import timedelta as _td
+            start = _dt.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            deals = mt5.history_deals_get(start - _td(hours=3), _dt.now() + _td(hours=3)) or []
+            opened = {}
+            for d in deals:
+                if d.magic == self.BOT_MAGIC and d.entry == mt5.DEAL_ENTRY_IN:
+                    m = _re.match(r"TG#(\d+)_", d.comment or "")
+                    opened[d.position_id] = int(m.group(1)) if m else None
+            out = []
+            for d in deals:
+                if d.position_id in opened and d.entry in (mt5.DEAL_ENTRY_OUT, getattr(mt5, "DEAL_ENTRY_OUT_BY", -1)):
+                    reason = {mt5.DEAL_REASON_TP: "TP", mt5.DEAL_REASON_SL: "SL"}.get(d.reason, "manuel")
+                    out.append({"signal": opened[d.position_id], "volume": d.volume, "reason": reason,
+                                "profit": round(d.profit + d.commission + d.swap + getattr(d, "fee", 0.0), 2)})
+            return out
+
+        try:
+            return await self._run(_get)
+        except Exception as e:
+            log.warning(f"Historique du jour indisponible: {e}")
+            return []
+
+    async def get_server_time(self, symbol: str = "XAUUSD") -> Optional[int]:
+        """Heure actuelle du SERVEUR MT5 (même référence que time_setup des ordres)."""
+        await self.ensure_connected()
+        if not MT5_AVAILABLE:
+            return int(time.time())
+
+        def _get():
+            tick = mt5.symbol_info_tick(self._resolve_symbol(symbol))
+            return int(tick.time) if tick else None
 
         return await self._run(_get)
 
@@ -501,6 +546,7 @@ class MT5Bridge:
         Chiffres de risque lus EN DIRECT sur MT5 (fiables même après un redémarrage) :
           open_signals : nombre de signaux qui ont encore une position ou un ordre en attente
           pnl_today    : gains/pertes RÉALISÉS aujourd'hui par le bot (profit + commission + swap)
+          signals_today: nombre de signaux tradés aujourd'hui
         """
         await self.ensure_connected()
         if not MT5_AVAILABLE:
@@ -508,7 +554,8 @@ class MT5Bridge:
 
         def _get():
             import re as _re
-            from datetime import datetime as _dt, timedelta as _td
+            from datetime import datetime as _dt
+            from datetime import timedelta as _td
             ids = set()
             for x in list(mt5.positions_get() or []) + list(mt5.orders_get() or []):
                 if x.magic == self.BOT_MAGIC:
@@ -523,7 +570,12 @@ class MT5Bridge:
             for d in deals:
                 if d.position_id in bot_positions and d.time >= start_ts - 3 * 3600:
                     pnl += d.profit + d.commission + d.swap + getattr(d, "fee", 0.0)
-            return {"open_signals": len(ids), "pnl_today": round(pnl, 2)}
+            # signaux réellement tradés aujourd'hui (au moins une entrée exécutée)
+            today = {(_re.match(r"TG#(\d+)_", d.comment or "") or [None, None])[1]
+                     for d in deals if d.magic == self.BOT_MAGIC and d.entry == mt5.DEAL_ENTRY_IN
+                     and d.time >= start_ts - 3 * 3600}
+            today.discard(None)
+            return {"open_signals": len(ids), "pnl_today": round(pnl, 2), "signals_today": len(today)}
 
         try:
             return await self._run(_get)

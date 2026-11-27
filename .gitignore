@@ -35,3 +35,10 @@ htmlcov/
 # OS
 .DS_Store
 Thumbs.db
+
+# Données locales du bot (ne jamais publier)
+logs/images_inconnues/
+state/
+*.pkl
+graphify-out/
+.claude/

@@ -4,7 +4,6 @@ main.py - Point d'entrée du bot augmenté avec boucle de monitoring Multi-TP (B
 from __future__ import annotations
 
 import asyncio
-import signal
 import sys
 import time
 from typing import Dict, Optional
@@ -16,17 +15,23 @@ try:
 except ImportError:
     UVLOOP_ACTIVE = False
 
-from config import get_config
+from config import get_config, reveal
 from database.db import Database
 from execution.mt5_bridge import MT5Bridge
 from execution.trade_executor import TradeExecutor
+from parser.regex_parser import looks_like_signal
 from parser.signal_model import SignalStatus
 from parser.signal_parser import SignalParser
-from parser.regex_parser import looks_like_signal
 from parser.update_parser import parse_update, parse_update_no_reply
 from risk_management.risk_manager import RiskManager
 from telegram_listener.listener import TelegramListener
+from utils.config_check import check_config
+from utils.heartbeat import write_heartbeat
+from utils.instance_lock import AlreadyRunningError, InstanceLock
 from utils.logger import get_logger, setup_logging
+from utils.notifier import Notifier
+from utils.report import format_daily_report
+from utils.state_store import StateStore
 
 try:
     import redis.asyncio as aioredis
@@ -53,12 +58,29 @@ class TradingBot:
         # pré-alerte "XAUUSD BUY NOW" dont le signal complet est lui-même une réponse...)
         self._reply_root: Dict[int, int] = {}
         self._last_signal_msg_id: Optional[int] = None   # dernier signal vu sur le canal
+        # Mémoire sur disque : après un redémarrage, les réponses et ordres sans "répondre"
+        # retrouvent toujours leur signal
+        self._restore(StateStore())
+        self._notifier = Notifier(enabled=bool(getattr(self._cfg.bot, "notify", False)))
         # Tâche d'arrière-plan pour surveiller le Break-Even
         self._monitor_task: Optional[asyncio.Task] = None
 
     async def startup(self) -> None:
-        setup_logging(self._cfg.bot.log_level)
+        tg, m5 = self._cfg.telegram, self._cfg.mt5
+        setup_logging(self._cfg.bot.log_level,
+                      secrets=[tg.phone, tg.phone.lstrip("+"), reveal(tg.api_hash), reveal(m5.password)])
         log.info(f"=== BOT DÉMARRAGE === env={self._cfg.bot.env} uvloop={UVLOOP_ACTIVE}")
+        r, b = self._cfg.risk, self._cfg.bot
+        lot = f"{r.lot_per_tp} par TP (max {r.max_lot})" if r.lot_per_tp > 0 else f"{r.fixed_lot or 'auto'} (max {r.max_lot})"
+        log.info(f"[CONFIG] Lot : {lot} — trades simultanés max {r.max_simultaneous_trades} — "
+                 f"perte max/jour {str(r.max_daily_loss_percent) + ' %' if r.max_daily_loss_percent else 'aucune'}")
+        log.info(f"[CONFIG] Horaires : {r.trading_hours or 'toujours'} / jours {r.trading_days or 'tous'} — "
+                 f"max {r.max_trades_per_day or '∞'} signal(aux)/jour — notifications {'oui' if b.notify else 'non'}")
+        problems = check_config(self._cfg)
+        for level, msg in problems:
+            (log.error if level == "ERREUR" else log.warning if level == "ATTENTION" else log.info)(f"[CONFIG] {msg}")
+        if any(level == "ERREUR" for level, _ in problems):
+            raise RuntimeError("Configuration invalide dans .env — corrige les lignes [CONFIG] ci-dessus")
 
         try:
             self._db = Database(self._cfg.database.database_url)
@@ -105,23 +127,33 @@ class TradingBot:
         self._listener = TelegramListener(
             config=self._cfg.telegram,
             on_message=self._on_telegram_message,
+            on_ready=lambda: self._notifier.attach(self._listener.send_to_self),
         )
 
         # 🚀 LANCEMENT DE LA BOUCLE DE SURVEILLANCE BE EN ARRIÈRE-PLAN
         self._monitor_task = asyncio.create_task(self._monitor_loop())
 
         log.info("=== BOT PRÊT — En attente de signaux... ===")
+        self._notify("✅ Bot démarré — en écoute du canal")
 
     async def _monitor_loop(self) -> None:
         """Boucle d'arrière-plan autonome vérifiant le statut des TP toutes les secondes."""
         log.info("🔄 Boucle de monitoring Multi-TP (BE) démarrée")
+        expiry = float(getattr(self._cfg.bot, "pending_expiry_minutes", 0) or 0)
+        tick = 0
         while True:
             try:
                 if self._executor:
                     await self._executor.monitor_and_adjust_be()
+                    if expiry > 0 and tick % 15 == 0:          # ordres en attente : vérif toutes les 15 s
+                        await self._executor.expire_pending_orders(expiry)
+                if tick % 30 == 0:
+                    await self._maybe_send_daily_report()
+                    self._write_heartbeat()
             except Exception as e:
                 log.error(f"Erreur dans la boucle de monitoring BE: {e}")
-            await asyncio.sleep(1.0) # Fréquence de rafraîchissement d'une seconde
+            tick += 1
+            await asyncio.sleep(1.0)  # Fréquence de rafraîchissement d'une seconde
 
     async def shutdown(self) -> None:
         log.info("Arrêt du bot...")
@@ -133,6 +165,10 @@ class TradingBot:
             except asyncio.CancelledError:
                 pass
 
+        notifier = getattr(self, "_notifier", None)
+        if notifier:
+            await notifier.flush()
+            notifier.stop()
         if self._listener:  await self._listener.stop()
         if self._mt5:       await self._mt5.disconnect()
         if self._db:        await self._db.disconnect()
@@ -167,6 +203,7 @@ class TradingBot:
             self._reply_root[msg_id] = root
             if len(self._reply_root) > 5000:
                 self._reply_root = dict(list(self._reply_root.items())[-2500:])
+            self._persist()
 
         is_signal = looks_like_signal(text)
 
@@ -196,8 +233,10 @@ class TradingBot:
 
         if signal is None:
             log.info(f"[{msg_id}] Pas un signal — ignoré")
+            self._persist()
             return
         self._last_signal_msg_id = msg_id
+        self._persist()
 
         parse_ms = (time.time_ns() - t0) / 1_000_000
         log.info(
@@ -207,6 +246,50 @@ class TradingBot:
             f"conf={confidence:.2f} parse_ms={parse_ms:.1f}ms"
         )
         await self._execute_and_log(signal, t0)
+
+    async def _maybe_send_daily_report(self) -> None:
+        """Envoie le récap du jour une fois, à l'heure BOT_DAILY_REPORT_HOUR."""
+        from datetime import datetime
+        hour = int(getattr(self._cfg.bot, "daily_report_hour", -1))
+        now = datetime.now()
+        if hour < 0 or now.hour != hour or getattr(self, "_last_report_day", None) == now.date():
+            return
+        self._last_report_day = now.date()
+        if self._mt5 is None or not getattr(self._cfg.bot, "notify", False):
+            return
+        deals = await self._mt5.get_day_deals()
+        self._notify(format_daily_report(deals, now.date()))
+        log.info("📊 Récap du jour envoyé sur Telegram")
+
+    def _write_heartbeat(self) -> None:
+        try:
+            write_heartbeat({
+                "last_signal_msg_id": self._last_signal_msg_id,
+                "tracked_trades": len(getattr(self._executor, "_tracked_trades", []) or []),
+            })
+        except OSError as e:
+            log.debug(f"Heartbeat non écrit: {e}")
+
+    def _notify(self, text: str) -> None:
+        notifier = getattr(self, "_notifier", None)
+        if notifier:
+            notifier.notify(text)
+
+    def _restore(self, state: StateStore) -> None:
+        self._state = state
+        saved = state.load()
+        self._reply_root = {int(k): int(v) for k, v in saved.get("reply_root", {}).items()}
+        self._last_signal_msg_id = saved.get("last_signal_msg_id")
+
+    def _persist(self) -> None:
+        state = getattr(self, "_state", None)
+        if state is None:
+            return
+        try:
+            recent = dict(list(self._reply_root.items())[-2000:])
+            state.save({"reply_root": recent, "last_signal_msg_id": self._last_signal_msg_id})
+        except OSError as e:
+            log.warning(f"Mémoire du bot non sauvegardée: {e}")
 
     async def _execute_and_log(self, signal, t0: int, label: str = "TRADES ENVOYÉS") -> None:
         result = await self._executor.execute(signal)
@@ -218,11 +301,16 @@ class TradingBot:
                 f"🎯 {label} — Ticket Principal={result.ticket} "
                 f"prix={result.filled_price} total={total_ms:.1f}ms"
             )
+            tps = ", ".join("OPEN" if tp is None else f"{tp:g}" for tp in (signal.take_profits or [])) or "—"
+            self._notify(f"🎯 {signal.direction} {signal.symbol} ouvert à {result.filled_price} "
+                         f"(lot {result.lot_size}) — SL {signal.stop_loss} — TP {tps} — signal #{signal.telegram_msg_id}")
         else:
             log.warning(
                 f"⛔ Ordre non exécuté — status={result.status} "
                 f"raison={result.error_message}"
             )
+            self._notify(f"⛔ Signal #{signal.telegram_msg_id} ({signal.direction} {signal.symbol}) non tradé : "
+                         f"{result.error_message}")
 
         if self._db:
             await self._db.save_signal(result)
@@ -255,8 +343,12 @@ class TradingBot:
         try:
             n = await self._executor.apply_update(signal_msg_id, cmds)
             log.info(f"🔧 {n} modification(s) appliquée(s) sur MT5 pour #{signal_msg_id}")
+            if n:
+                self._notify(f"🔧 Canal : « {text.strip()[:80]} » → {', '.join(map(str, cmds))} "
+                             f"({n} modification(s) sur MT5, signal #{signal_msg_id})")
         except Exception as e:
             log.error(f"Erreur mise à jour #{signal_msg_id}: {e}")
+            self._notify(f"❌ Erreur en appliquant « {text.strip()[:60]} » sur #{signal_msg_id} : {e}")
         return True
 
     async def _handle_edit(
@@ -306,6 +398,12 @@ def main() -> None:
     print("=" * 55)
     print("✅ uvloop actif" if UVLOOP_ACTIVE else "⚠️  uvloop non disponible — asyncio standard")
 
+    try:
+        lock = InstanceLock().acquire()
+    except AlreadyRunningError as e:
+        print(f"⛔ {e}")
+        sys.exit(2)
+
     bot = TradingBot()
     try:
         asyncio.run(bot.run())
@@ -316,6 +414,8 @@ def main() -> None:
         import traceback
         traceback.print_exc()
         sys.exit(1)
+    finally:
+        lock.release()
 
 
 if __name__ == "__main__":

@@ -8,7 +8,7 @@ import json
 from functools import lru_cache
 from typing import Dict, List
 
-from pydantic import Field, field_validator
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,7 +16,7 @@ class TelegramConfig(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="TELEGRAM_", env_file=".env", extra="ignore")
 
     api_id: int = Field(..., description="Telegram API ID from my.telegram.org")
-    api_hash: str = Field(..., description="Telegram API Hash from my.telegram.org")
+    api_hash: SecretStr = Field(..., description="Telegram API Hash from my.telegram.org (jamais affiché)")
     phone: str = Field(..., description="Phone number with country code")
     session_name: str = Field(default="trading_bot")
     group_ids: str = Field(..., description="Comma-separated group IDs")
@@ -37,7 +37,7 @@ class MT5Config(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="MT5_", env_file=".env", extra="ignore")
 
     login: int = Field(..., description="MT5 account login")
-    password: str = Field(..., description="MT5 account password")
+    password: SecretStr = Field(..., description="MT5 account password (jamais affiché)")
     server: str = Field(..., description="MT5 broker server")
     path: str = Field(default="", description="Path to terminal64.exe")
     timeout: int = Field(default=60000, description="MT5 connection timeout ms")
@@ -63,6 +63,11 @@ class RiskConfig(BaseSettings):
     )
     max_lot: float = Field(default=1.0, description="Plafond dur du lot, quel que soit le calcul")
     margin_safety_ratio: float = Field(default=0.8, description="Part de la marge libre utilisable")
+    trading_hours: str = Field(
+        default="", description='Heures où le bot ouvre des trades, ex "08:00-22:00" (vide = toujours)',
+    )
+    trading_days: str = Field(default="", description='Jours de trading, ex "1-5" = lundi→vendredi (vide = tous)')
+    max_trades_per_day: int = Field(default=0, description="Nombre max de signaux tradés par jour (0 = illimité)")
     max_entry_distance_percent: float = Field(
         default=1.0,
         description="Refuse un signal dont l'entrée est à plus de X % du prix actuel (faute de frappe)",
@@ -96,6 +101,15 @@ class BotConfig(BaseSettings):
     update_no_reply_fallback: bool = Field(
         default=True,
         description="Un ordre clair posté SANS 'répondre' s'applique au dernier signal (s'il a des trades ouverts)",
+    )
+    notify: bool = Field(
+        default=False, description="Notifications du bot dans tes Messages enregistrés Telegram",
+    )
+    daily_report_hour: int = Field(
+        default=22, description="Heure (0-23) du récap du jour sur Telegram si BOT_NOTIFY=true (-1 = jamais)",
+    )
+    pending_expiry_minutes: float = Field(
+        default=0, description="Annule un ordre en attente non déclenché après X minutes (0 = jamais)",
     )
     update_max_distance_percent: float = Field(
         default=3.0, description="SL/TP reçu par message à plus de X % de l'entrée = faute de frappe → ignoré",
@@ -140,6 +154,11 @@ class AppConfig:
     @property
     def is_development(self) -> bool:
         return self.bot.env == "development"
+
+
+def reveal(value) -> str:
+    """Valeur en clair d'un SecretStr (ou d'une chaîne simple), à n'utiliser qu'au moment de se connecter."""
+    return value.get_secret_value() if hasattr(value, "get_secret_value") else value
 
 
 @lru_cache(maxsize=1)

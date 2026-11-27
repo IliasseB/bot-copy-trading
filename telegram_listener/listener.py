@@ -10,9 +10,10 @@ from datetime import datetime, timezone
 from typing import Callable, Coroutine, List, Optional, Set
 
 from telethon import TelegramClient, events
+from telethon.errors import FloodWaitError
 from telethon.tl.types import Message, PeerChannel
 
-from config import TelegramConfig
+from config import TelegramConfig, reveal
 from parser.image_classifier import image_to_text
 from utils.logger import get_logger
 
@@ -27,14 +28,15 @@ UNKNOWN_IMG_DIR   = os.path.join("logs", "images_inconnues")
 
 
 class TelegramListener:
-    def __init__(self, config: TelegramConfig, on_message: SignalCallback):
+    def __init__(self, config: TelegramConfig, on_message: SignalCallback, on_ready=None):
         self._cfg = config
         self._on_message = on_message
+        self._on_ready = on_ready          # appelé une fois connecté (ex: brancher les notifications)
         self._group_ids: List = config.group_id_list
         self._client = TelegramClient(
             config.session_name,
             api_id=config.api_id,
-            api_hash=config.api_hash,
+            api_hash=reveal(config.api_hash),
             connection_retries=-1,
             retry_delay=1,
             auto_reconnect=True,
@@ -62,11 +64,17 @@ class TelegramListener:
             await self._handle(event.message, is_edit=True, source="push")
 
         self._running = True
+        if self._on_ready:
+            self._on_ready()
         await self._prime_seen_ids()
         asyncio.create_task(self._poll_loop(), name="poll")
 
         log.info(f"✅ Bot en écoute — temps réel + vérification du canal toutes les {self._poll_interval:g}s...")
         await self._client.run_until_disconnected()
+
+    async def send_to_self(self, text: str) -> None:
+        """Envoie un message dans tes "Messages enregistrés" (notifications du bot)."""
+        await self._client.send_message("me", text)
 
     async def stop(self) -> None:
         self._running = False
@@ -173,6 +181,12 @@ class TelegramListener:
             for entity in self._resolved:
                 try:
                     messages = await self._client.get_messages(entity, limit=POLL_LIMIT)
+                except FloodWaitError as e:
+                    # Telegram demande de ralentir : insister prolongerait le blocage.
+                    # Les nouveaux messages arrivent quand même en temps réel (push).
+                    log.warning(f"Telegram demande de ralentir : vérification du canal en pause {e.seconds} s")
+                    await asyncio.sleep(e.seconds + 1)
+                    continue
                 except Exception as e:
                     now = time.monotonic()
                     if now - self._last_poll_warn > 30:   # évite de spammer les logs

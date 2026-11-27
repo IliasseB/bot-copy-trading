@@ -5,12 +5,13 @@ from __future__ import annotations
 
 import asyncio
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
 from config import RiskConfig
-from parser.signal_model import Direction, TradingSignal
+from parser.signal_model import TradingSignal
 from utils.logger import get_logger
+from utils.trading_hours import is_trading_time
 
 log = get_logger("risk")
 
@@ -63,6 +64,10 @@ class RiskManager:
             if self._daily.emergency_stopped:
                 return RiskCheckResult(False, "DAILY_LOSS_LIMIT_HIT")
 
+            hours, days = getattr(self._cfg, "trading_hours", ""), getattr(self._cfg, "trading_days", "")
+            if (hours or days) and not is_trading_time(hours, days, self._now()):
+                return RiskCheckResult(False, f"Hors horaires de trading (heures='{hours}' jours='{days}')")
+
             # Chiffres en direct depuis MT5 si possible (sinon compteurs internes).
             # Avant, ces compteurs n'étaient jamais remis à jour à la fermeture des trades :
             # la limite de trades simultanés bloquait tout après 2 signaux, et la perte
@@ -73,7 +78,14 @@ class RiskManager:
 
             open_trades = stats["open_signals"] if stats else self._open_trades
             if open_trades >= self._cfg.max_simultaneous_trades:
-                return RiskCheckResult(False, f"Max simultaneous trades reached ({open_trades}/{self._cfg.max_simultaneous_trades})")
+                limit = self._cfg.max_simultaneous_trades
+                return RiskCheckResult(False, f"Max simultaneous trades reached ({open_trades}/{limit})")
+
+            max_day = int(getattr(self._cfg, "max_trades_per_day", 0) or 0)
+            if max_day > 0:
+                done_today = stats.get("signals_today", self._daily.trades_opened) if stats else self._daily.trades_opened
+                if done_today >= max_day:
+                    return RiskCheckResult(False, f"Limite de {max_day} signal(aux) par jour atteinte ({done_today})")
 
             if current_spread_points > self._cfg.max_spread_points:
                 return RiskCheckResult(False, f"Spread too wide: {current_spread_points} > {self._cfg.max_spread_points}")
@@ -203,8 +215,15 @@ class RiskManager:
         log.warning(f"Marge insuffisante pour lot={lot} (requise={required:.2f}, libre={free:.2f}) — lot réduit à {fitted}")
         return round(fitted, 2), ""
 
+    @staticmethod
+    def _now():
+        from datetime import datetime
+        return datetime.now()
+
     def on_trade_opened(self) -> None:
         self._open_trades += 1
+        self._refresh_daily_stats()
+        self._daily.trades_opened += 1
 
     def on_trade_closed(self, pnl: float) -> None:
         self._open_trades = max(0, self._open_trades - 1)
