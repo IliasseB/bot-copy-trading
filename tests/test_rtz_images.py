@@ -2,7 +2,6 @@
 Images de gestion du canal RTZ (vraies images, réduites à 400 px) : reconnaissance,
 traduction en ordre, et passage par le listener + le bot (MT5 simulé).
 """
-import asyncio
 import os
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace

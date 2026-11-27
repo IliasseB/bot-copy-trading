@@ -5,11 +5,11 @@ from __future__ import annotations
 
 import asyncio
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Optional
 
 from config import RiskConfig
-from parser.signal_model import Direction, TradingSignal
+from parser.signal_model import TradingSignal
 from utils.logger import get_logger
 from utils.trading_hours import is_trading_time
 

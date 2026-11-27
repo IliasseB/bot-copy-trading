@@ -6,9 +6,8 @@ from __future__ import annotations
 import logging
 import logging.handlers
 import sys
-import time
 from pathlib import Path
-from typing import Any, Iterable, Optional
+from typing import Iterable, Optional
 
 LOG_DIR = Path(__file__).parent.parent / "logs"
 LOG_DIR.mkdir(exist_ok=True)

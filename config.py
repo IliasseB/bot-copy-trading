@@ -8,7 +8,7 @@ import json
 from functools import lru_cache
 from typing import Dict, List
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 

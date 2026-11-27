@@ -4,7 +4,6 @@ parser/signal_parser.py - Orchestrateur avec logs complets.
 from __future__ import annotations
 
 import hashlib
-import time
 from typing import Optional, Set, Tuple
 
 from .nlp_parser import NLPParser

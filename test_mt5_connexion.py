@@ -8,12 +8,10 @@ USAGE : double-clique sur TEST_MT5.bat (ou lance "python test_mt5_connexion.py")
 from __future__ import annotations
 
 import asyncio
-import sys
 import time
 
 from config import get_config
 from execution.mt5_bridge import MT5Bridge
-from parser.signal_model import Direction, OrderType, TradingSignal
 from parser.regex_parser import RegexParser
 from risk_management.risk_manager import RiskManager
 from execution.trade_executor import TradeExecutor

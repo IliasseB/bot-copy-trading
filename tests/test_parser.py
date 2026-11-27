@@ -3,7 +3,7 @@ tests/test_parser.py - Unit tests for regex and signal parser.
 """
 import pytest
 from parser.regex_parser import RegexParser
-from parser.signal_model import Direction, OrderType
+from parser.signal_model import Direction
 
 
 @pytest.fixture
@@ -87,7 +87,7 @@ class TestRegexParser:
 class TestSignalModel:
 
     def test_buy_sl_above_entry_raises(self):
-        from parser.signal_model import TradingSignal, Direction, OrderType
+        from parser.signal_model import TradingSignal, Direction
         with pytest.raises(Exception):
             TradingSignal(
                 telegram_msg_id=1,

@@ -8,7 +8,7 @@ import re
 import time
 from typing import Optional, List, Dict, Any, Tuple
 
-from parser.signal_model import Direction, OrderType, SignalStatus, TradingSignal
+from parser.signal_model import SignalStatus, TradingSignal
 from risk_management.risk_manager import RiskManager, floor_to_step
 from parser.update_parser import UpdateCommand, resolve_price
 from utils.logger import get_logger

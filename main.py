@@ -4,7 +4,6 @@ main.py - Point d'entrée du bot augmenté avec boucle de monitoring Multi-TP (B
 from __future__ import annotations
 
 import asyncio
-import signal
 import sys
 import time
 from typing import Dict, Optional
