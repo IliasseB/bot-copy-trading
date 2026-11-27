@@ -110,6 +110,13 @@ RUN_TESTS.bat            (ou : python -m pytest -q)
 Les tests n'utilisent ni Telegram ni MT5 (faux clients) et n'ouvrent jamais le vrai `.env`.
 GitHub lance les tests, le lint et la détection de secrets sur chaque pull request.
 
+## Documentation
+
+- [docs/CANAL_RTZ.md](docs/CANAL_RTZ.md) : formats du canal et règles de lecture
+- [docs/IMAGES.md](docs/IMAGES.md) : lecture des images (TP1 HIT, METTEZ VOUS BE…)
+- [docs/BACKTEST.md](docs/BACKTEST.md) : résultats sur 6 mois de signaux
+- [CHANGELOG.md](CHANGELOG.md) · [CONTRIBUTING.md](CONTRIBUTING.md) · [GUIDE_DEMARRAGE.md](GUIDE_DEMARRAGE.md)
+
 ## Sécurité
 
 Voir [SECURITY.md](SECURITY.md) : fichiers à ne jamais publier, protection anti-secrets,
