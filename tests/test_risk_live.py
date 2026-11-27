@@ -1,5 +1,6 @@
 """Limites de risque lues en direct sur MT5 (trades simultanés + perte max du jour)."""
 import pytest
+
 from config import RiskConfig
 from parser.signal_model import TradingSignal
 from risk_management.risk_manager import RiskManager

@@ -6,12 +6,13 @@ from __future__ import annotations
 
 import re
 import time
-from typing import Optional, List, Dict, Any, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from parser.signal_model import SignalStatus, TradingSignal
-from risk_management.risk_manager import RiskManager, floor_to_step
 from parser.update_parser import UpdateCommand, resolve_price
+from risk_management.risk_manager import RiskManager, floor_to_step
 from utils.logger import get_logger
+
 from .mt5_bridge import MT5Bridge, MT5ConnectionError, MT5ExecutionError
 
 log = get_logger("executor")

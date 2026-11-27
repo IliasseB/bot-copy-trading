@@ -2,6 +2,7 @@
 tests/test_parser.py - Unit tests for regex and signal parser.
 """
 import pytest
+
 from parser.regex_parser import RegexParser
 from parser.signal_model import Direction
 
@@ -87,7 +88,7 @@ class TestRegexParser:
 class TestSignalModel:
 
     def test_buy_sl_above_entry_raises(self):
-        from parser.signal_model import TradingSignal, Direction
+        from parser.signal_model import Direction, TradingSignal
         with pytest.raises(Exception):
             TradingSignal(
                 telegram_msg_id=1,
@@ -103,7 +104,8 @@ class TestSignalModel:
 
     def test_latency_properties(self):
         import time
-        from parser.signal_model import TradingSignal, Direction
+
+        from parser.signal_model import Direction, TradingSignal
         t0 = time.time_ns()
         sig = TradingSignal(
             telegram_msg_id=1,

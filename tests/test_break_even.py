@@ -1,7 +1,8 @@
 """Tests du passage en Break-Even (BE) quand TP1 est touché."""
 import pytest
-from execution.trade_executor import TradeExecutor
+
 from execution.mt5_bridge import MT5Bridge
+from execution.trade_executor import TradeExecutor
 
 
 class FakeMT5:

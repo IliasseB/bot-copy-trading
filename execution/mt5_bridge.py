@@ -9,7 +9,8 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
+
 from config import MT5Config, reveal
 from utils.logger import get_logger
 
@@ -505,7 +506,8 @@ class MT5Bridge:
 
         def _get():
             import re as _re
-            from datetime import datetime as _dt, timedelta as _td
+            from datetime import datetime as _dt
+            from datetime import timedelta as _td
             start = _dt.now().replace(hour=0, minute=0, second=0, microsecond=0)
             deals = mt5.history_deals_get(start - _td(hours=3), _dt.now() + _td(hours=3)) or []
             opened = {}
@@ -552,7 +554,8 @@ class MT5Bridge:
 
         def _get():
             import re as _re
-            from datetime import datetime as _dt, timedelta as _td
+            from datetime import datetime as _dt
+            from datetime import timedelta as _td
             ids = set()
             for x in list(mt5.positions_get() or []) + list(mt5.orders_get() or []):
                 if x.magic == self.BOT_MAGIC:

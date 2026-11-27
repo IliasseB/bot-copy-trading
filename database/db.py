@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 import asyncpg
+
 from utils.logger import get_logger
 
 log = get_logger("database")

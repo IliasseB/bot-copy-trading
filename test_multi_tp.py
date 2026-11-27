@@ -6,10 +6,10 @@ import sys
 
 from config import get_config
 from execution.mt5_bridge import MT5Bridge
-from risk_management.risk_manager import RiskManager
 from execution.trade_executor import TradeExecutor
-from parser.signal_model import TradingSignal, Direction, OrderType
-from utils.logger import setup_logging, get_logger
+from parser.signal_model import Direction, OrderType, TradingSignal
+from risk_management.risk_manager import RiskManager
+from utils.logger import get_logger, setup_logging
 
 log = get_logger("test_be")
 

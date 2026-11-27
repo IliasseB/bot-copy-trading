@@ -6,7 +6,6 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
-
 from telegram_listener.listener import TelegramListener
 
 

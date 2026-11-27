@@ -19,19 +19,19 @@ from config import get_config, reveal
 from database.db import Database
 from execution.mt5_bridge import MT5Bridge
 from execution.trade_executor import TradeExecutor
+from parser.regex_parser import looks_like_signal
 from parser.signal_model import SignalStatus
 from parser.signal_parser import SignalParser
-from parser.regex_parser import looks_like_signal
 from parser.update_parser import parse_update, parse_update_no_reply
 from risk_management.risk_manager import RiskManager
 from telegram_listener.listener import TelegramListener
 from utils.config_check import check_config
 from utils.heartbeat import write_heartbeat
+from utils.instance_lock import AlreadyRunningError, InstanceLock
+from utils.logger import get_logger, setup_logging
 from utils.notifier import Notifier
 from utils.report import format_daily_report
 from utils.state_store import StateStore
-from utils.instance_lock import AlreadyRunningError, InstanceLock
-from utils.logger import get_logger, setup_logging
 
 try:
     import redis.asyncio as aioredis

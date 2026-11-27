@@ -47,7 +47,7 @@ async def test_erreur_d_envoi_ne_casse_pas_la_file():
 
 
 async def test_bot_notifie_trade_et_gestion():
-    from tests.test_rtz_channel import RichFakeMT5, SIG
+    from tests.test_rtz_channel import SIG, RichFakeMT5
     from tests.test_updates import make_bot
     mt5 = RichFakeMT5(price=4068.0)
     bot = make_bot(mt5, lot=0.02)

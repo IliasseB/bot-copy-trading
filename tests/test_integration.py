@@ -2,15 +2,16 @@
 tests/test_integration.py
 End-to-end pipeline test: raw text → parsed signal → mock execution.
 """
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from parser.signal_parser import SignalParser
-from parser.signal_model import SignalStatus
-from execution.trade_executor import TradeExecutor
-from execution.mt5_bridge import MT5Bridge
-from risk_management.risk_manager import RiskManager
+import pytest
+
 from config import RiskConfig
+from execution.mt5_bridge import MT5Bridge
+from execution.trade_executor import TradeExecutor
+from parser.signal_model import SignalStatus
+from parser.signal_parser import SignalParser
+from risk_management.risk_manager import RiskManager
 
 
 @pytest.fixture

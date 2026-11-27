@@ -10,8 +10,9 @@ from typing import Dict, Optional, Tuple
 
 from pydantic import ValidationError
 
-from .signal_model import Direction, OrderType, TradingSignal
 from utils.logger import get_logger
+
+from .signal_model import Direction, OrderType, TradingSignal
 
 log = get_logger("parser")
 

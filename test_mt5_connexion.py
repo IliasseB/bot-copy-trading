@@ -12,9 +12,9 @@ import time
 
 from config import get_config
 from execution.mt5_bridge import MT5Bridge
+from execution.trade_executor import TradeExecutor
 from parser.regex_parser import RegexParser
 from risk_management.risk_manager import RiskManager
-from execution.trade_executor import TradeExecutor
 
 
 def line(txt=""):

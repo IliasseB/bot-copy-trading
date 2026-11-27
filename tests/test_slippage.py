@@ -1,5 +1,5 @@
-from parser.signal_model import Direction, TradingSignal
 from execution.trade_executor import TradeExecutor
+from parser.signal_model import Direction, TradingSignal
 
 
 def sig(lo, hi):
