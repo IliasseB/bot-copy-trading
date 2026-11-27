@@ -89,7 +89,8 @@ class TestSignalModel:
 
     def test_buy_sl_above_entry_raises(self):
         from parser.signal_model import Direction, TradingSignal
-        with pytest.raises(Exception):
+        from pydantic import ValidationError
+        with pytest.raises(ValidationError, match="SL"):
             TradingSignal(
                 telegram_msg_id=1,
                 telegram_chat_id=1,
