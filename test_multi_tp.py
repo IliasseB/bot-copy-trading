@@ -21,14 +21,14 @@ async def run_test():
     # 1. Initialisation
     cfg = get_config()
     setup_logging("INFO")
-    
+
     mt5 = MT5Bridge(cfg.mt5)
     await mt5.connect()
-    
+
     risk = RiskManager(cfg.risk, mt5)
     # On force un lot par défaut un peu plus gros pour être sûr de pouvoir le diviser par 3
-    cfg.risk.default_lot_size = 0.09 
-    
+    cfg.risk.default_lot_size = 0.09
+
     executor = TradeExecutor(mt5=mt5, risk=risk, confidence_threshold=0.0)
 
     # 2. Récupération du prix actuel pour créer un signal réaliste
@@ -53,7 +53,7 @@ async def run_test():
         stop_loss=current_price - 5.0,        # SL à 5 dollars en dessous
         take_profits=[
             current_price + 0.5,              # TP1 (très proche)
-            current_price + 3.0,              # TP2 
+            current_price + 3.0,              # TP2
             0.0                            # TP3 (Sera converti en 0.0)
         ],
         confidence=1.0
@@ -61,7 +61,7 @@ async def run_test():
 
     print("\n🚀 1. ENVOI DE L'ORDRE MULTI-TP (Divisé en 3)...")
     result = await executor.execute(test_signal)
-    
+
     if result.status != "EXECUTED":
         print(f"❌ Échec de l'exécution : {result.error_message}")
         return
