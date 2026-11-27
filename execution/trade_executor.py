@@ -193,8 +193,9 @@ class TradeExecutor:
         filled = filled_prices[0] if filled_prices else current_price
         exec_ms = (time.time_ns() - t_start) / 1_000_000
 
-        if signal.entry:
-            self._risk.check_slippage(signal.entry, filled, signal.symbol)
+        ref = self._slippage_reference(signal, filled)
+        if ref is not None:
+            self._risk.check_slippage(ref, filled, signal.symbol)
 
         signal = signal.model_copy(update={
             "status":        SignalStatus.EXECUTED,
@@ -206,6 +207,19 @@ class TradeExecutor:
 
         log.info(f"🎯 PIPELINE MULTI-TP REUSSI — Tickets={tickets} | Temps={exec_ms:.0f}ms")
         return signal
+
+    @staticmethod
+    def _slippage_reference(signal: TradingSignal, filled: float) -> Optional[float]:
+        """Prix de référence du glissement : rempli DANS la zone = pas de glissement ;
+        sinon on mesure par rapport au bord de zone le plus proche."""
+        lo = signal.entry_low or signal.entry
+        hi = signal.entry_high or signal.entry
+        if lo is None or hi is None or not filled:
+            return None
+        lo, hi = min(lo, hi), max(lo, hi)
+        if lo <= filled <= hi:
+            return None
+        return lo if filled < lo else hi
 
     # ── BREAK-EVEN ────────────────────────────────────────────────────────────
 
