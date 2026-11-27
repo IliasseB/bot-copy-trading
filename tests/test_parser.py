@@ -88,8 +88,9 @@ class TestRegexParser:
 class TestSignalModel:
 
     def test_buy_sl_above_entry_raises(self):
-        from parser.signal_model import Direction, TradingSignal
         from pydantic import ValidationError
+
+        from parser.signal_model import Direction, TradingSignal
         with pytest.raises(ValidationError, match="SL"):
             TradingSignal(
                 telegram_msg_id=1,
