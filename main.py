@@ -26,6 +26,7 @@ from parser.regex_parser import looks_like_signal
 from parser.update_parser import parse_update, parse_update_no_reply
 from risk_management.risk_manager import RiskManager
 from telegram_listener.listener import TelegramListener
+from utils.config_check import check_config
 from utils.heartbeat import write_heartbeat
 from utils.notifier import Notifier
 from utils.report import format_daily_report
@@ -70,6 +71,11 @@ class TradingBot:
         setup_logging(self._cfg.bot.log_level,
                       secrets=[tg.phone, tg.phone.lstrip("+"), reveal(tg.api_hash), reveal(m5.password)])
         log.info(f"=== BOT DÉMARRAGE === env={self._cfg.bot.env} uvloop={UVLOOP_ACTIVE}")
+        problems = check_config(self._cfg)
+        for level, msg in problems:
+            (log.error if level == "ERREUR" else log.warning if level == "ATTENTION" else log.info)(f"[CONFIG] {msg}")
+        if any(level == "ERREUR" for level, _ in problems):
+            raise RuntimeError("Configuration invalide dans .env — corrige les lignes [CONFIG] ci-dessus")
 
         try:
             self._db = Database(self._cfg.database.database_url)
