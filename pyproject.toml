@@ -1,0 +1,15 @@
+[tool.ruff]
+line-length = 130
+target-version = "py310"
+extend-exclude = ["venv", "graphify-out", "state", "logs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "I"]
+ignore = [
+    "E701",   # "if x: return" sur une ligne : style volontaire dans les tests
+    "E702",
+    "B008",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E501"]
