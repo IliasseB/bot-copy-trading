@@ -100,7 +100,7 @@ Boucle de surveillance (1 s) : BE après TP1, ordres en attente expirés, récap
 | `risk_management/` | lot, marge, spread, perte max, horaires, limite par jour |
 | `utils/` | logs (secrets masqués), verrou d'instance, état, notifications, récap |
 | `tools/` | statut, export, backtest, nouveaux modèles d'image |
-| `tests/` | ~200 tests, dont des centaines de messages réels du canal |
+| `tests/` | 198 tests, dont des dizaines de messages et d'images réels du canal |
 
 ## Tests
 
