@@ -74,7 +74,7 @@ class TradingBot:
         r, b = self._cfg.risk, self._cfg.bot
         lot = f"{r.lot_per_tp} par TP (max {r.max_lot})" if r.lot_per_tp > 0 else f"{r.fixed_lot or 'auto'} (max {r.max_lot})"
         log.info(f"[CONFIG] Lot : {lot} — trades simultanés max {r.max_simultaneous_trades} — "
-                 f"perte max/jour {r.max_daily_loss_percent or 'aucune'}%")
+                 f"perte max/jour {str(r.max_daily_loss_percent) + ' %' if r.max_daily_loss_percent else 'aucune'}")
         log.info(f"[CONFIG] Horaires : {r.trading_hours or 'toujours'} / jours {r.trading_days or 'tous'} — "
                  f"max {r.max_trades_per_day or '∞'} signal(aux)/jour — notifications {'oui' if b.notify else 'non'}")
         problems = check_config(self._cfg)
