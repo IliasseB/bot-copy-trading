@@ -36,12 +36,12 @@ class InstanceLock:
             else:
                 import fcntl
                 fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except OSError:
+        except OSError as err:
             fh.close()
             raise AlreadyRunningError(
                 "Le bot (ou un outil qui utilise la session Telegram) tourne déjà. "
                 "Ferme l'autre fenêtre avant d'en lancer une nouvelle."
-            )
+            ) from err
         fh.seek(0)
         fh.truncate()
         fh.write(str(os.getpid()))
