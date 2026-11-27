@@ -62,3 +62,55 @@ et les textes pédagogiques. Les règles ont été calibrées sur ~4000 messages
 
 Au démarrage, le bot affiche un résumé de ces réglages et signale les combinaisons incohérentes
 (par ex. `RISK_MAX_LOT` trop petit pour ouvrir TP2).
+
+## Outils
+
+Tous en **lecture seule** (aucun ordre envoyé). Ceux qui utilisent la session Telegram refusent
+de tourner en même temps que le bot.
+
+| Commande | Rôle |
+|---|---|
+| `python -m tools.status` | état du bot (heartbeat) + positions et ordres du bot sur MT5 |
+| `python -m tools.export_channel --limit 4000` | exporte l'historique du canal en JSON (bot arrêté) |
+| `python -m tools.backtest --export state/channel.json --legs 1 2` | rejoue les signaux sur les ticks MT5 réels |
+| `python -m tools.add_image_template <image> TP1_HIT` | apprend un nouveau design d'image du canal |
+| `python scripts/check_secrets.py --all` | vérifie qu'aucun secret n'est dans le dépôt |
+
+## Architecture
+
+```
+Telegram (push temps réel + vérification du canal chaque seconde)
+   │  textes, messages modifiés, images sans texte
+   ▼
+TelegramListener ──► image_classifier (TP1 HIT, SL HIT, METTEZ VOUS BE…)
+   │
+   ▼
+TradingBot._on_telegram_message
+   ├── nouveau signal ─► RegexParser ─► TradeExecutor.execute ─► RiskManager ─► MT5Bridge
+   ├── message modifié ─► TradeExecutor.sync_edited_signal
+   └── réponse / ordre ─► update_parser ─► TradeExecutor.apply_update ─► MT5Bridge
+Boucle de surveillance (1 s) : BE après TP1, ordres en attente expirés, récap du jour, heartbeat
+```
+
+| Dossier | Contenu |
+|---|---|
+| `telegram_listener/` | connexion Telegram, polling, lecture des images |
+| `parser/` | signaux (`regex_parser`), gestion (`update_parser`), images (`image_classifier`) |
+| `execution/` | `trade_executor` (multi-TP, BE, mises à jour) et `mt5_bridge` |
+| `risk_management/` | lot, marge, spread, perte max, horaires, limite par jour |
+| `utils/` | logs (secrets masqués), verrou d'instance, état, notifications, récap |
+| `tools/` | statut, export, backtest, nouveaux modèles d'image |
+| `tests/` | ~200 tests, dont des centaines de messages réels du canal |
+
+## Tests
+
+```
+RUN_TESTS.bat            (ou : python -m pytest -q)
+```
+Les tests n'utilisent ni Telegram ni MT5 (faux clients) et n'ouvrent jamais le vrai `.env`.
+GitHub lance les tests, le lint et la détection de secrets sur chaque pull request.
+
+## Sécurité
+
+Voir [SECURITY.md](SECURITY.md) : fichiers à ne jamais publier, protection anti-secrets,
+que faire si une clé a fuité.
