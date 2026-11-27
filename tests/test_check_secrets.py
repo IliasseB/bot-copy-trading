@@ -34,3 +34,9 @@ def test_lecture_du_env(tmp_path: Path):
     env = tmp_path / ".env"
     env.write_text("TELEGRAM_PHONE=+33611111111\nMT5_PASSWORD=secret123 # commentaire\nBOT_ENV=prod\n", encoding="utf-8")
     assert env_secrets(env) == {"TELEGRAM_PHONE": "+33611111111", "MT5_PASSWORD": "secret123"}
+
+
+def test_le_depot_entier_ne_contient_aucun_secret():
+    """Filet de sécurité : échoue si un secret (ou un fichier interdit) entre dans le dépôt."""
+    from scripts.check_secrets import main
+    assert main(["--all"]) == 0

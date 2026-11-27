@@ -30,6 +30,8 @@ PATTERNS = {
 ENV_KEYS = ("TELEGRAM_API_HASH", "TELEGRAM_API_ID", "TELEGRAM_PHONE", "MT5_PASSWORD", "MT5_LOGIN",
             "REDIS_PASSWORD", "POSTGRES_PASSWORD", "DATABASE_URL")
 SKIP_SUFFIXES = (".jpg", ".png", ".pkl", ".pyc")
+# Fichiers qui contiennent volontairement de FAUX secrets (tests du scanner lui-même)
+ALLOWLIST = {"scripts/check_secrets.py", "tests/test_check_secrets.py"}
 
 
 def env_secrets(env_path: Path = ROOT / ".env") -> Dict[str, str]:
@@ -63,13 +65,13 @@ def scan_files(files: Iterable[str], secrets: Dict[str, str], read=None) -> List
         if FORBIDDEN_NAMES.search(f):
             problems.append((f, "fichier interdit"))
             continue
-        if f.lower().endswith(SKIP_SUFFIXES):
+        if f.lower().endswith(SKIP_SUFFIXES) or f in ALLOWLIST:
             continue
         try:
             text = read(f) if read else (ROOT / f).read_text(encoding="utf-8", errors="ignore")
         except (OSError, subprocess.CalledProcessError):
             continue
-        if f.endswith("scripts/check_secrets.py"):
+        if f in ALLOWLIST:
             continue
         problems += scan_text(f, text, secrets)
     return problems
