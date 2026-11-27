@@ -99,3 +99,17 @@ async def test_unchanged_old_messages_not_replayed_after_prime():
     await lst._prime_seen_ids()
     await run_poll(lst)
     assert got == []                                           # rien n'est rejoué au démarrage
+
+
+async def test_floodwait_met_le_polling_en_pause():
+    from telethon.errors import FloodWaitError
+    received = []
+    lst = make_listener(received)
+    calls = []
+
+    async def get_messages(entity, limit=20):
+        calls.append(1)
+        raise FloodWaitError(request=None, capture=0)
+    lst._client.get_messages = get_messages
+    await run_poll(lst, seconds=0.3)
+    assert len(calls) == 1          # pas de rafale de requêtes pendant le blocage

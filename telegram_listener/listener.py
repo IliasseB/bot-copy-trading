@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from typing import Callable, Coroutine, List, Optional, Set
 
 from telethon import TelegramClient, events
+from telethon.errors import FloodWaitError
 from telethon.tl.types import Message, PeerChannel
 
 from config import TelegramConfig, reveal
@@ -180,6 +181,12 @@ class TelegramListener:
             for entity in self._resolved:
                 try:
                     messages = await self._client.get_messages(entity, limit=POLL_LIMIT)
+                except FloodWaitError as e:
+                    # Telegram demande de ralentir : insister prolongerait le blocage.
+                    # Les nouveaux messages arrivent quand même en temps réel (push).
+                    log.warning(f"Telegram demande de ralentir : vérification du canal en pause {e.seconds} s")
+                    await asyncio.sleep(e.seconds + 1)
+                    continue
                 except Exception as e:
                     now = time.monotonic()
                     if now - self._last_poll_warn > 30:   # évite de spammer les logs
